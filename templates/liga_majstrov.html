@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futbalík.sk - Liga Majstrov</title>
+    <style>
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #1a1a1a; color: #f5f5f5; padding: 20px; margin: 0; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { text-align: center; color: #42a5f5; font-size: 28px; margin-bottom: 5px; }
+        
+        .nav-riadok { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .nav-link { background: #333; color: #42a5f5; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 14px; }
+        
+        .liga-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; }
+        .tab-btn { flex: 1; min-width: 110px; text-align: center; background: #222; color: #aaa; padding: 10px 5px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; border-bottom: 3px solid #333; }
+        .tab-btn.active { background: #1a237e; color: #42a5f5; border-bottom: 3px solid #42a5f5; }
+
+        h2.sekcia-nadpis { color: #42a5f5; border-bottom: 2px solid #1a237e; padding-bottom: 5px; margin-top: 40px; }
+
+        table { width: 100%; border-collapse: collapse; background: #222; border-radius: 4px; overflow: hidden; }
+        th, td { padding: 10px 12px; text-align: left; font-size: 14px; }
+        th { background-color: #1a237e; color: #fff; text-transform: uppercase; font-size: 11px; }
+        tr { border-bottom: 1px solid #333; }
+        
+        .pos { font-weight: bold; color: #42a5f5; }
+        .pts { font-weight: bold; color: #42a5f5; text-align: right; }
+
+        .pavuk-kontajner { display: flex; justify-content: space-between; background: #222; padding: 20px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); overflow-x: auto; gap: 20px; }
+        .kolo { display: flex; flex-direction: column; justify-content: space-around; width: 220px; }
+        .kolo-nazov { text-align: center; font-size: 12px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #333; }
+        
+        .dvojica { background: #2a2a2a; border-radius: 4px; padding: 8px; margin: 15px 0; border-left: 4px solid #42a5f5; }
+        .pavuk-tim { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+        .pavuk-tim.vitaz { color: #00e676; font-weight: bold; }
+        .pavuk-skore { font-weight: bold; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>⭐ UEFA Champions League</h1>
+        
+        <div class="nav-riadok">
+            <a href="/" class="nav-link">⬅ Späť na Live Zápasy</a>
+            <span style="color: #888; font-size: 14px;">Sekcia: <b style="color: #fff;">Liga Majstrov</b></span>
+        </div>
+
+        <div class="liga-tabs">
+            <a href="/tabulka/PL" class="tab-btn {% if aktualna_liga == 'PL' %}active{% endif %}">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</a>
+            <a href="/tabulka/BL1" class="tab-btn {% if aktualna_liga == 'BL1' %}active{% endif %}">🇩🇪 Bundesliga</a>
+            <a href="/tabulka/PD" class="tab-btn {% if aktualna_liga == 'PD' %}active{% endif %}">🇪🇸 La Liga</a>
+            <a href="/tabulka/FL1" class="tab-btn {% if aktualna_liga == 'FL1' %}active{% endif %}">🇫🇷 Ligue 1</a>
+            <a href="/tabulka/SA" class="tab-btn {% if aktualna_liga == 'SA' %}active{% endif %}">🇮🇹 Serie A</a>
+            <a href="/tabulka/CL" class="tab-btn {% if aktualna_liga == 'CL' %}active{% endif %}">🏆 Liga Majstrov</a>
+        </div>
+
+        <h2 class="sekcia-nadpis">📋 Celková Tabuľka (Ligová fáza)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Tím</th>
+                    <th style="text-align: center;">Z</th>
+                    <th style="text-align: center;">V</th>
+                    <th style="text-align: center;">R</th>
+                    <th style="text-align: center;">P</th>
+                    <th style="text-align: right;">Body</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for riadok in tabulka[:12] %}
+                <tr>
+                    <td class="pos">{{ riadok.position }}</td>
+                    <td style="font-weight: bold;">⭐ {{ riadok.team.name }}</td>
+                    <td style="text-align: center; color: #aaa;">{{ riadok.playedGames }}</td>
+                    <td style="text-align: center; color: #aaa;">{{ riadok.won }}</td>
+                    <td style="text-align: center; color: #aaa;">{{ riadok.draw }}</td>
+                    <td style="text-align: center; color: #aaa;">{{ riadok.lost }}</td>
+                    <td class="pts">{{ riadok.points }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h2 class="sekcia-nadpis">🌿 Vyraďovacia Fáza (Play-off Pavúk)</h2>
+        <div class="pavuk-kontajner">
+            
+            <div class="kolo">
+                <div class="kolo-nazov">Štvrťfinále</div>
+                <div class="dvojica">
+                    <div class="pavuk-tim vitaz"><span>Real Madrid</span> <span class="pavuk-skore">4</span></div>
+                    <div class="pavuk-tim"><span>Arsenal FC</span> <span class="pavuk-skore">2</span></div>
+                </div>
+                <div class="dvojica">
+                    <div class="pavuk-tim"><span>FC Barcelona</span> <span class="pavuk-skore">1</span></div>
+                    <div class="pavuk-tim vitaz"><span>Manchester City</span> <span class="pavuk-skore">3</span></div>
+                </div>
+                <div class="dvojica">
+                    <div class="pavuk-tim vitaz"><span>Bayern Mníchov</span> <span class="pavuk-skore">5</span></div>
+                    <div class="pavuk-tim"><span>Paris SG</span> <span class="pavuk-skore">3</span></div>
+                </div>
+                <div class="dvojica">
+                    <div class="pavuk-tim"><span>Inter Miláno</span> <span class="pavuk-skore">2</span></div>
+                    <div class="pavuk-tim vitaz"><span>Liverpool FC</span> <span class="pavuk-skore">4</span></div>
+                </div>
+            </div>
+
+            <div class="kolo">
+                <div class="kolo-nazov">Semifinále</div>
+                <div class="dvojica">
+                    <div class="pavuk-tim vitaz"><span>Real Madrid</span> <span class="pavuk-skore">3</span></div>
+                    <div class="pavuk-tim"><span>Manchester City</span> <span class="pavuk-skore">2</span></div>
+                </div>
+                <div class="dvojica">
+                    <div class="pavuk-tim"><span>Bayern Mníchov</span> <span class="pavuk-skore">1</span></div>
+                    <div class="pavuk-tim vitaz"><span>Liverpool FC</span> <span class="pavuk-skore">2</span></div>
+                </div>
+            </div>
+
+            <div class="kolo" style="justify-content: center;">
+                <div class="kolo-nazov" style="color: #ffd700;">🏆 FINÁLE (Wembley)</div>
+                <div class="dvojica" style="border-left: 4px solid #ffd700; background: #332200;">
+                    <div class="pavuk-tim"><span>Real Madrid</span> <span class="pavuk-skore">-</span></div>
+                    <div class="pavuk-tim"><span>Liverpool FC</span> <span class="pavuk-skore">-</span></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <br><br>
+</body>
+</html>
