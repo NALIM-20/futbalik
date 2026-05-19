@@ -11,29 +11,30 @@
         
         .nav-riadok { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .nav-link { background: #333; color: #42a5f5; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 14px; }
+        .nav-link:hover { background: #444; }
         
         .liga-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; }
         .tab-btn { flex: 1; min-width: 110px; text-align: center; background: #222; color: #aaa; padding: 10px 5px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; border-bottom: 3px solid #333; }
+        .tab-btn:hover { background: #292929; color: #fff; }
         .tab-btn.active { background: #1a237e; color: #42a5f5; border-bottom: 3px solid #42a5f5; }
 
         h2.sekcia-nadpis { color: #42a5f5; border-bottom: 2px solid #1a237e; padding-bottom: 5px; margin-top: 40px; }
 
-        table { width: 100%; border-collapse: collapse; background: #222; border-radius: 4px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; background: #222; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         th, td { padding: 10px 12px; text-align: left; font-size: 14px; }
         th { background-color: #1a237e; color: #fff; text-transform: uppercase; font-size: 11px; }
         tr { border-bottom: 1px solid #333; }
+        tr:hover { background: #292929; }
         
         .pos { font-weight: bold; color: #42a5f5; }
         .pts { font-weight: bold; color: #42a5f5; text-align: right; }
 
-        .pavuk-kontajner { display: flex; justify-content: space-between; background: #222; padding: 20px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); overflow-x: auto; gap: 20px; }
-        .kolo { display: flex; flex-direction: column; justify-content: space-around; width: 220px; }
-        .kolo-nazov { text-align: center; font-size: 12px; font-weight: bold; color: #888; text-transform: uppercase; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #333; }
-        
-        .dvojica { background: #2a2a2a; border-radius: 4px; padding: 8px; margin: 15px 0; border-left: 4px solid #42a5f5; }
-        .pavuk-tim { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
-        .pavuk-tim.vitaz { color: #00e676; font-weight: bold; }
-        .pavuk-skore { font-weight: bold; color: #fff; }
+        .playoff-kontajner { background: #222; padding: 15px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .zapas-riadok { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 12px 15px; margin-bottom: 8px; border-radius: 4px; border-left: 4px solid #42a5f5; }
+        .faza-odznak { font-size: 11px; font-weight: bold; color: #42a5f5; text-transform: uppercase; margin-bottom: 4px; display: inline-block; background: #1a237e; padding: 2px 8px; border-radius: 3px; }
+        .zapas-timy { font-weight: 500; font-size: 15px; }
+        .zapas-skore { font-weight: bold; font-size: 16px; color: #00e676; background: #1a1a1a; padding: 4px 10px; border-radius: 4px; min-width: 40px; text-align: center; }
+        .status-info { font-size: 11px; color: #888; margin-left: 10px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -69,7 +70,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for riadok in tabulka[:12] %}
+                {% for riadok in tabulka %}
                 <tr>
                     <td class="pos">{{ riadok.position }}</td>
                     <td style="font-weight: bold;">⭐ {{ riadok.team.name }}</td>
@@ -83,50 +84,42 @@
             </tbody>
         </table>
 
-        <h2 class="sekcia-nadpis">🌿 Vyraďovacia Fáza (Play-off Pavúk)</h2>
-        <div class="pavuk-kontajner">
-            
-            <div class="kolo">
-                <div class="kolo-nazov">Štvrťfinále</div>
-                <div class="dvojica">
-                    <div class="pavuk-tim vitaz"><span>Real Madrid</span> <span class="pavuk-skore">4</span></div>
-                    <div class="pavuk-tim"><span>Arsenal FC</span> <span class="pavuk-skore">2</span></div>
+        <h2 class="sekcia-nadpis">🌿 Vyraďovacia Fáza (Reálne zápasy)</h2>
+        <div class="playoff-kontajner">
+            {% if vyradovacie_zapasy %}
+                {% for zapas in vyradovacie_zapasy %}
+                    <div class="zapas-riadok">
+                        <div>
+                            <span class="faza-odznak">{{ zapas.faza_sk }}</span>
+                            <div class="zapas-timy">
+                                ⚽ {{ zapas.homeTeam }} — {{ zapas.awayTeam }}
+                                <span class="status-info">
+                                    {% if zapas.status == 'IN_PLAY' or zapas.status == 'PAUSED' %}
+                                        (Živo)
+                                    {% elif zapas.status == 'FINISHED' %}
+                                        (Koniec)
+                                    {% else %}
+                                        (Plánované)
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="zapas-skore">
+                            {% if zapas.score_home is not none %}
+                                {{ zapas.score_home }} : {{ zapas.score_away }}
+                            {% else %}
+                                - : -
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; color: #888; padding: 30px 10px;">
+                    📭 V tejto sezóne sa zatiaľ neodohrali žiadne zápasy vyraďovacej fázy alebo API dáta ešte nespracovalo.
                 </div>
-                <div class="dvojica">
-                    <div class="pavuk-tim"><span>FC Barcelona</span> <span class="pavuk-skore">1</span></div>
-                    <div class="pavuk-tim vitaz"><span>Manchester City</span> <span class="pavuk-skore">3</span></div>
-                </div>
-                <div class="dvojica">
-                    <div class="pavuk-tim vitaz"><span>Bayern Mníchov</span> <span class="pavuk-skore">5</span></div>
-                    <div class="pavuk-tim"><span>Paris SG</span> <span class="pavuk-skore">3</span></div>
-                </div>
-                <div class="dvojica">
-                    <div class="pavuk-tim"><span>Inter Miláno</span> <span class="pavuk-skore">2</span></div>
-                    <div class="pavuk-tim vitaz"><span>Liverpool FC</span> <span class="pavuk-skore">4</span></div>
-                </div>
-            </div>
-
-            <div class="kolo">
-                <div class="kolo-nazov">Semifinále</div>
-                <div class="dvojica">
-                    <div class="pavuk-tim vitaz"><span>Real Madrid</span> <span class="pavuk-skore">3</span></div>
-                    <div class="pavuk-tim"><span>Manchester City</span> <span class="pavuk-skore">2</span></div>
-                </div>
-                <div class="dvojica">
-                    <div class="pavuk-tim"><span>Bayern Mníchov</span> <span class="pavuk-skore">1</span></div>
-                    <div class="pavuk-tim vitaz"><span>Liverpool FC</span> <span class="pavuk-skore">2</span></div>
-                </div>
-            </div>
-
-            <div class="kolo" style="justify-content: center;">
-                <div class="kolo-nazov" style="color: #ffd700;">🏆 FINÁLE (Wembley)</div>
-                <div class="dvojica" style="border-left: 4px solid #ffd700; background: #332200;">
-                    <div class="pavuk-tim"><span>Real Madrid</span> <span class="pavuk-skore">-</span></div>
-                    <div class="pavuk-tim"><span>Liverpool FC</span> <span class="pavuk-skore">-</span></div>
-                </div>
-            </div>
-
+            {% endif %}
         </div>
+
     </div>
     <br><br>
 </body>

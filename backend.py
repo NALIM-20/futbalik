@@ -4,10 +4,8 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# Tvoj prístupový kľúč k football-data.org API
 API_KEY = "e0cad9070cfc48898499f4c78c69141d"
 
-# Mapovanie kódov líg na pekné slovenské názvy
 NAZVY_LIG = {
     "PL": "Premier League (Anglicko)",
     "BL1": "Bundesliga (Nemecko)",
@@ -18,7 +16,6 @@ NAZVY_LIG = {
 }
 
 def stiahni_realne_zapasy(vybrany_datum):
-    # API vyžaduje rozsah od-do, pre jeden konkrétny deň nastavíme rovnaký dátum
     url = f"https://api.football-data.org/v4/matches?dateFrom={vybrany_datum}&dateTo={vybrany_datum}"
     headers = { "X-Auth-Token": API_KEY }
     
@@ -34,15 +31,12 @@ def stiahni_realne_zapasy(vybrany_datum):
         for z in vsetky_zapasy:
             status = z.get("status")
             if status in ["IN_PLAY", "PAUSED"]:
-                nas_status = "LIVE"
-                minuta = "Živo"
+                nas_status = "LIVE"; minuta = "Živo"
             elif status == "FINISHED":
-                nas_status = "FINISHED"
-                minuta = "Koniec"
+                nas_status = "FINISHED"; minuta = "Koniec"
             else:
                 nas_status = "SCHEDULED"
                 utc_time = z.get("utcDate", "")
-                # Prevedieme svetový čas UTC na prehľadný formát hodín a minút
                 minuta = datetime.strptime(utc_time, "%Y-%m-%dT%H:%M:%SZ").strftime("%H:%M") if utc_time else "Plán"
 
             goals_list = []
@@ -80,14 +74,12 @@ def stiahni_realne_zapasy(vybrany_datum):
 
 @app.route("/")
 def home():
-    # Zistíme, aký dátum používateľ prezerá z URL parametra (/?date=YYYY-MM-DD)
     vybrany_datum = request.args.get("date")
     dnes_str = datetime.now().strftime("%Y-%m-%d")
     
     if not vybrany_datum:
         vybrany_datum = dnes_str
 
-    # Vygenerujeme kalendár na 5 dní dopredu (Dnes, Zajtra, +2, +3, +4 dni)
     dni_menu = []
     for i in range(5):
         den = datetime.now() + timedelta(days=i)
@@ -113,12 +105,14 @@ def tabulka(liga_kod="PL"):
     if liga_kod not in NAZVY_LIG:
         liga_kod = "PL"
         
-    url = f"https://api.football-data.org/v4/competitions/{liga_kod}/standings"
+    url_standings = f"https://api.football-data.org/v4/competitions/{liga_kod}/standings"
     headers = { "X-Auth-Token": API_KEY }
     stojisko = []
+    vyradovacie_zapasy = []
     
+    # 1. Stiahnutie tabuľky
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url_standings, headers=headers)
         if response.status_code == 200:
             data = response.json()
             standings_data = data.get("standings", [])
@@ -127,7 +121,7 @@ def tabulka(liga_kod="PL"):
     except:
         pass
 
-    # Záložné dáta generované dynamicky, ak má API výpadok alebo je pauza medzi sezónami
+    # Ak API nedodalo dáta (záloha pre lokálny vývoj)
     if not stojisko:
         for i in range(1, 18):
             stojisko.append({
@@ -136,8 +130,40 @@ def tabulka(liga_kod="PL"):
                 "playedGames": 22, "won": 10, "draw": 6, "lost": 6, "points": 36
             })
 
+    # 2. Ak ide o Ligu Majstrov, stiahneme aj jej vyraďovacie zápasy
     if liga_kod == "CL":
-        return render_template("liga_majstrov.html", tabulka=stojisko, liga=NAZVY_LIG[liga_kod], aktualna_liga=liga_kod)
+        url_matches = f"https://api.football-data.org/v4/competitions/CL/matches"
+        try:
+            res_matches = requests.get(url_matches, headers=headers)
+            if res_matches.status_code == 200:
+                vsetky_cl_zapasy = res_matches.json().get("matches", [])
+                
+                # Zadefinujeme si štádiá, ktoré patria do vyraďovačky (vylúčime ligovú fázu "REGULAR_SEASON")
+                fazy_playoff = ["PLAY_OFF_ROUND", "ROUND_OF_16", "QUARTER_FINALS", "SEMI_FINALS", "FINAL"]
+                
+                for zm in vsetky_cl_zapasy:
+                    if zm.get("stage") in fazy_playoff:
+                        # Pekný preklad štádií do slovenčiny
+                        preklady_faz = {
+                            "PLAY_OFF_ROUND": "Play-off o osemfinále",
+                            "ROUND_OF_16": "Osemfinále",
+                            "QUARTER_FINALS": "Štvrťfinále",
+                            "SEMI_FINALS": "Semifinále",
+                            "FINAL": "🏆 FINÁLE"
+                        }
+                        
+                        vyradovacie_zapasy.append({
+                            "faza_sk": preklady_faz.get(zm.get("stage"), zm.get("stage")),
+                            "homeTeam": zm.get("homeTeam", {}).get("name", "Neznámy"),
+                            "awayTeam": zm.get("awayTeam", {}).get("name", "Neznámy"),
+                            "score_home": zm.get("score", {}).get("fullTime", {}).get("home"),
+                            "score_away": zm.get("score", {}).get("fullTime", {}).get("away"),
+                            "status": zm.get("status")
+                        })
+        except Exception as e:
+            print(f"Chyba pri sťahovaní CL zápasov: {e}")
+
+        return render_template("liga_majstrov.html", tabulka=stojisko, liga=NAZVY_LIG[liga_kod], aktualna_liga=liga_kod, vyradovacie_zapasy=vyradovacie_zapasy)
         
     return render_template("tabulka.html", tabulka=stojisko, liga=NAZVY_LIG[liga_kod], aktualna_liga=liga_kod)
 
