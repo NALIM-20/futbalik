@@ -15,7 +15,6 @@ NAZVY_LIG = {
     "CL": "Liga Majstrov"
 }
 
-# 🏆 Ručne pridané trofeje pre najznámejšie kluby (keďže API ich nemá)
 TROFEJE_KLUBOV = {
     "Real Madrid CF": "15x Liga majstrov, 36x La Liga, 20x Copa del Rey",
     "FC Barcelona": "5x Liga majstrov, 27x La Liga, 31x Copa del Rey",
@@ -101,26 +100,70 @@ def ziskaj_detail_zapasu(zapas_id):
     except: pass
     return jsonify({"venue": "Neznámy štadión", "referee": "Neznámy", "goals": ["Chyba rozhrania API"]})
 
-# 🔥 NOVÁ ROUTE PRE PROFIL TÍMU (ŠTADIÓN, SÚPISKA, TROFEJE)
+# 🔥 AKTUALIZOVANÁ ROUTE PRE PROFIL TÍMU (SÚPISKY + HISTÓRIA ZÁPASOV)
 @app.route("/tabulka/tim/<int:tim_id>")
 def profil_timu(tim_id):
-    url = f"https://api.football-data.org/v4/teams/{tim_id}"
     headers = { "X-Auth-Token": API_KEY }
+    url_team = f"https://api.football-data.org/v4/teams/{tim_id}"
+    url_matches = f"https://api.football-data.org/v4/teams/{tim_id}/matches?limit=100"
     
+    tim_data = {}
+    odohrane = []
+    naplanovane = []
+    trofeje = "Klub má na konte domáce tituly a pohárové úspechy."
+
+    # 1. Stiahneme základný profil tímu a súpisku
     try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            data = response.json()
-            nazov_klubu = data.get("name", "Neznámy klub")
-            
-            # Vytiahneme trofeje z nášho slovníka, alebo dáme univerzálny text
-            trofeje = TROFEJE_KLUBOV.get(nazov_klubu, "Klub má na konte domáce tituly a pohárové úspechy (detaily v free API nedostupné).")
-            
-            return render_template("tim.html", tim=data, trofeje=trofeje)
+        res_team = requests.get(url_team, headers=headers)
+        if res_team.status_code == 200:
+            tim_data = res_team.json()
+            nazov_klubu = tim_data.get("name", "")
+            trofeje = TROFEJE_KLUBOV.get(nazov_klubu, trofeje)
     except Exception as e:
-        print(e)
-        
-    return "Chyba pri načítaní profilu tímu. Skontrolujte limit API požiadaviek.", 404
+        print(f"Chyba profilu tímu: {e}")
+
+    # 2. Stiahneme históriu a budúce zápasy klubu
+    try:
+        res_matches = requests.get(url_matches, headers=headers)
+        if res_matches.status_code == 200:
+            vsetky_zapasy = res_matches.json().get("matches", [])
+            
+            for m in vsetky_zapasy:
+                status = m.get("status")
+                datum_raw = m.get("utcDate", "")
+                pekny_datum = datetime.strptime(datum_raw, "%Y-%m-%dT%H:%M:%SZ").strftime("%d.%m.%Y") if datum_raw else ""
+                
+                zapas_info = {
+                    "datum": pekny_datum,
+                    "sutaz": m.get("competition", {}).get("name", "Súťaž"),
+                    "homeTeam": m.get("homeTeam", {}).get("name", "Neznámy"),
+                    "awayTeam": m.get("awayTeam", {}).get("name", "Neznámy"),
+                    "score_home": m.get("score", {}).get("fullTime", {}).get("home"),
+                    "score_away": m.get("score", {}).get("fullTime", {}).get("away")
+                }
+                
+                if status == "FINISHED":
+                    odohrane.append(zapas_info)
+                else:
+                    zapas_info["cas"] = datetime.strptime(datum_raw, "%Y-%m-%dT%H:%M:%SZ").strftime("%H:%M") if datum_raw else ""
+                    naplanovane.append(zapas_info)
+            
+            # Zoradíme odohrané od najnovších a naplánované od najbližších
+            odohrane.reverse()
+    except Exception as e:
+        print(f"Chyba zápasov tímu: {e}")
+
+    if not tim_data:
+        return "Chyba pri načítaní profilu tímu. Skontrolujte limit API požiadaviek.", 404
+
+    # Zoberieme iba top 5 z každého soudka
+    return render_template(
+        "tim.html", 
+        tim=tim_data, 
+        trofeje=trofeje, 
+        posledne_zapasy=odohrane[:5], 
+        nasledujuce_zapasy=naplanovane[:5]
+    )
 
 @app.route("/tabulka")
 @app.route("/tabulka/<liga_kod>")
