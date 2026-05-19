@@ -3,32 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futbalík.sk - Tabuľky líg</title>
+    <title>Futbalík.sk - Ligové Tabuľky</title>
     <style>
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #1a1a1a; color: #f5f5f5; padding: 20px; margin: 0; }
-        .container { max-width: 750px; margin: 0 auto; }
+        .container { max-width: 800px; margin: 0 auto; }
         h1 { text-align: center; color: #00e676; font-size: 28px; margin-bottom: 5px; }
         
         .nav-riadok { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .nav-link { background: #333; color: #00e676; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 14px; }
         .nav-link:hover { background: #444; }
         
-        .liga-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
-        .tab-btn { flex: 1; min-width: 110px; text-align: center; background: #222; color: #aaa; padding: 10px 5px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; border-bottom: 3px solid #333; transition: all 0.2s; }
+        .liga-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; }
+        .tab-btn { flex: 1; min-width: 110px; text-align: center; background: #222; color: #aaa; padding: 10px 5px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; border-bottom: 3px solid #333; }
         .tab-btn:hover { background: #292929; color: #fff; }
-        .tab-btn.active { background: #2a2a2a; color: #00e676; border-bottom: 3px solid #00e676; }
+        .tab-btn.active { background: #1b5e20; color: #00e676; border-bottom: 3px solid #00e676; }
 
         table { width: 100%; border-collapse: collapse; background: #222; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        th, td { padding: 12px 15px; text-align: left; }
-        th { background-color: #2a2a2a; color: #aaa; font-size: 12px; text-transform: uppercase; font-weight: bold; }
+        th, td { padding: 12px 15px; text-align: left; font-size: 14px; }
+        th { background-color: #1b5e20; color: #fff; text-transform: uppercase; font-size: 11px; }
         tr { border-bottom: 1px solid #333; }
-        tr:last-child { border-bottom: none; }
         tr:hover { background: #292929; }
         
         .pos { font-weight: bold; color: #00e676; width: 30px; }
-        .team-name { font-weight: bold; }
         .pts { font-weight: bold; color: #00e676; text-align: right; }
-        .center-col { text-align: center; color: #aaa; }
+        
+        /* 🔥 ŠTÝL PRE KLIKATEĽNÝ TÍM */
+        .tim-odkaz { color: #fff; text-decoration: none; font-weight: bold; transition: color 0.2s; }
+        .tim-odkaz:hover { color: #00e676; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -38,7 +39,7 @@
         
         <div class="nav-riadok">
             <a href="/" class="nav-link">⬅ Späť na Live Zápasy</a>
-            <span style="color: #888; font-size: 14px;">Liga: <b style="color: #fff;">{{ liga }}</b></span>
+            <span style="color: #888; font-size: 14px;">Aktuálna liga: <b style="color: #fff;">{{ liga }}</b></span>
         </div>
 
         <div class="liga-tabs">
@@ -54,7 +55,7 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Tím</th>
+                    <th>Tím (klikni pre profil)</th>
                     <th style="text-align: center;">Z</th>
                     <th style="text-align: center;">V</th>
                     <th style="text-align: center;">R</th>
@@ -66,17 +67,21 @@
                 {% for riadok in tabulka %}
                 <tr>
                     <td class="pos">{{ riadok.position }}</td>
-                    <td class="team-name">⚽ {{ riadok.team.name }}</td>
-                    <td class="center-col">{{ riadok.playedGames }}</td>
-                    <td class="center-col">{{ riadok.won }}</td>
-                    <td class="center-col">{{ riadok.draw }}</td>
-                    <td class="center-col">{{ riadok.lost }}</td>
+                    <td>
+                        <a href="/tabulka/tim/{{ riadok.team.id }}" class="tim-odkaz">
+                            ⚽ {{ riadok.team.name }}
+                        </a>
+                    </td>
+                    <td style="text-align: center; color: #aaa;">{{ riadok.playedGames }}</td>
+                    <td style="text-align: center; color: #aaa;">{{ riadok.won }}</td>
+                    <td style="text-align: center; color: #aaa;">{{ riadok.draw }}</td>
+                    <td style="text-align: center; color: #aaa;">{{ riadok.lost }}</td>
                     <td class="pts">{{ riadok.points }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-
+    <br><br>
 </body>
 </html>

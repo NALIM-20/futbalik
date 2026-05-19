@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futbalík.sk - {{ tim.name }}</title>
+    <style>
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #1a1a1a; color: #f5f5f5; padding: 20px; margin: 0; }
+        .container { max-width: 700px; margin: 0 auto; }
+        
+        .hlavicka-klub { background: #222; padding: 25px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-bottom: 4px solid #00e676; text-align: center; margin-bottom: 25px; }
+        .hlavicka-klub h1 { margin: 10px 0 5px 0; color: #fff; font-size: 32px; }
+        .info-pruhy { display: flex; justify-content: center; gap: 20px; color: #aaa; font-size: 14px; margin-top: 10px; }
+        
+        .sekcia-box { background: #222; padding: 20px; border-radius: 6px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .sekcia-nadpis { color: #00e676; font-size: 18px; margin-top: 0; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        
+        .trofej-text { font-size: 16px; font-weight: bold; color: #ffb300; line-height: 1.5; }
+        
+        .supiska-skupina { font-weight: bold; color: #888; text-transform: uppercase; font-size: 12px; margin-top: 15px; margin-bottom: 5px; background: #2c2c2c; padding: 3px 8px; border-radius: 3px; display: inline-block; }
+        .hrac-riadok { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #2d2d2d; font-size: 15px; }
+        .hrac-riadok:hover { background: #292929; }
+        .hrac-narodnost { color: #888; font-size: 13px; }
+
+        .btn-back { display: inline-block; background: #333; color: #aaa; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 14px; margin-bottom: 20px; transition: all 0.2s; }
+        .btn-back:hover { background: #444; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <a href="javascript:history.back()" class="btn-back">⬅ Späť na Tabuľku</a>
+
+        <div class="hlavicka-klub">
+            <div style="font-size: 40px;">🛡️</div>
+            <h1>{{ tim.name }}</h1>
+            <div class="info-pruhy">
+                <span>🏟️ <b>Štadión:</b> {{ tim.venue if tim.venue else 'Neznámy' }}</span>
+                <span>🎨 <b>Farby:</b> {{ tim.clubColors if tim.clubColors else 'Neznáme' }}</span>
+                <span>🌍 <b>Založený:</b> {{ tim.founded if tim.founded else 'Neznámy rok' }}</span>
+            </div>
+        </div>
+
+        <div class="sekcia-box">
+            <h2 class="sekcia-nadpis">🏆 Najväčšie Úspechy a Trofeje</h2>
+            <div class="trofej-text">
+                ✨ {{ trofeje }}
+            </div>
+        </div>
+
+        <div class="sekcia-box">
+            <h2 class="sekcia-nadpis">🏃 Aktuálna Súpiska Tímu</h2>
+            
+            {% if tim.squad %}
+                <div class="supiska-skupina">Brankári</div>
+                {% for hrac in tim.squad if hrac.position == 'Goalkeeper' %}
+                    <div class="hrac-riadok">
+                        <span>🧤 {{ hrac.name }}</span>
+                        <span class="hrac-narodnost">{{ hrac.nationality }}</span>
+                    </div>
+                {% endfor %}
+
+                <div class="supiska-skupina">Obrancovia</div>
+                {% for hrac in tim.squad if hrac.position == 'Defence' %}
+                    <div class="hrac-riadok">
+                        <span>🛡️ {{ hrac.name }}</span>
+                        <span class="hrac-narodnost">{{ hrac.nationality }}</span>
+                    </div>
+                {% endfor %}
+
+                <div class="supiska-skupina">Záložníci</div>
+                {% for hrac in tim.squad if hrac.position == 'Midfield' %}
+                    <div class="hrac-riadok">
+                        <span>⚙️ {{ hrac.name }}</span>
+                        <span class="hrac-narodnost">{{ hrac.nationality }}</span>
+                    </div>
+                {% endfor %}
+
+                <div class="supiska-skupina">Útočníci</div>
+                {% for hrac in tim.squad if hrac.position == 'Offence' %}
+                    <div class="hrac-riadok">
+                        <span>🔥 {{ hrac.name }}</span>
+                        <span class="hrac-narodnost">{{ hrac.nationality }}</span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #888; font-style: italic; margin: 0;">Bezplatná verzia API neposkytuje súpisku pre tento vybraný klub.</p>
+            {% endif %}
+        </div>
+
+    </div>
+    <br><br>
+</body>
+</html>
