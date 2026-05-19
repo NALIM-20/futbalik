@@ -8,6 +8,8 @@
     <meta name="description" content="Sleduj live výsledky, tabuľky a detaily zápasov z Premier League, Bundesligy, La Ligy a Ligy majstrov na webe Futbalík.">
     <meta name="keywords" content="futbalik, futbal, live vysledky, premier league, bundesliga, liga majstrov, flashscore slovensko">
     <meta name="author" content="Futbalík Team">
+    
+    <meta name="google-site-verification" content="UlZJIwplXHVMiOXMWBEn4N7Qav7eJ0o7ihnLbc-UYTM" />
 
     <style>
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #1a1a1a; color: #f5f5f5; padding: 20px; margin: 0; }
@@ -19,7 +21,6 @@
         .btn-tabulka { display: inline-block; background: #333; color: #00e676; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: bold; transition: background 0.2s; }
         .btn-tabulka:hover { background: #444; }
         
-        /* KALENDÁR DNÍ */
         .kalendar-dni { display: flex; gap: 5px; margin-bottom: 25px; background: #222; padding: 5px; border-radius: 6px; }
         .den-btn { flex: 1; text-align: center; color: #aaa; background: transparent; padding: 10px 5px; text-decoration: none; font-size: 13px; font-weight: bold; border-radius: 4px; transition: all 0.2s; }
         .den-btn:hover { background: #2a2a2a; color: #fff; }
@@ -88,62 +89,4 @@
                     </div>
                     
                     <div class="timy-sekcia">
-                        <div class="tim-riadok"><span class="logo">{{ zapas.homeTeam.logo }}</span> {{ zapas.homeTeam.name }}</div>
-                        <div class="tim-riadok"><span class="logo">{{ zapas.awayTeam.logo }}</span> {{ zapas.awayTeam.name }}</div>
-                    </div>
-                    
-                    <div class="skore-sekcia {% if zapas.status == 'LIVE' %}skore-live{% endif %}">
-                        <div id="skore-home-{{ zapas.id }}">{% if zapas.score.home is not none %}{{ zapas.score.home }}{% else %}-{% endif %}</div>
-                        <div id="skore-away-{{ zapas.id }}">{% if zapas.score.away is not none %}{{ zapas.score.away }}{% else %}-{% endif %}</div>
-                    </div>
-                </div>
-
-                <div id="detaily-{{ zapas.id }}" class="zapas-detaily">
-                    <div class="detail-title">🏟️ Štadión</div>
-                    <div class="detail-item">{{ zapas.details.venue }}</div>
-                    
-                    <div class="detail-title">🏁 Rozhodca</div>
-                    <div class="detail-item">{{ zapas.details.referee }}</div>
-                    
-                    <div class="detail-title">⭐ Udalosti / Strelci</div>
-                    <div class="detail-item">
-                        {% for gól in zapas.details.goals %}
-                            <div>{{ gól }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <div class="no-matches">
-                <p style="font-size: 24px; margin: 0 0 10px 0;">📭 Žiadne zápasy</p>
-                <p style="margin: 0; color: #666; font-size: 14px;">Pre vybraný deň nie sú v sledovaných ligách naplánované žiadne stretnutia.</p>
-            </div>
-        {% endif %}
-    </div>
-
-    <script>
-        function toggleDetails(id) {
-            let detailBox = document.getElementById(id);
-            detailBox.style.display = (detailBox.style.display === "block") ? "none" : "block";
-        }
-
-        function aktualizujZapas() {
-            fetch('/api/zapasy?date={{ aktualny_datum }}')
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(zapas => {
-                        let homeDiv = document.getElementById(`skore-home-${zapas.id}`);
-                        let awayDiv = document.getElementById(`skore-away-${zapas.id}`);
-                        
-                        if(homeDiv && zapas.score.home !== null) homeDiv.innerText = zapas.score.home;
-                        if(awayDiv && zapas.score.away !== null) awayDiv.innerText = zapas.score.away;
-                    });
-                })
-                .catch(err => console.log("Chyba pri aktualizácii:", err));
-        }
-        // Automatická aktualizácia live zápasov na pozadí každých 15 sekúnd
-        setInterval(aktualizujZapas, 15000);
-    </script>
-
-</body>
-</html>
+                        <div class="
