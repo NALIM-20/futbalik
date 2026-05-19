@@ -41,6 +41,7 @@
         .zapas-detaily-cl { display: none; background: #1f1f1f; padding: 15px; margin-bottom: 8px; border-radius: 0 0 4px 4px; border-left: 4px solid #ff3d00; font-size: 14px; border-top: 1px solid #333; }
         .detail-title { font-weight: bold; color: #888; font-size: 11px; text-transform: uppercase; margin-top: 8px; margin-bottom: 2px; }
         .detail-item { color: #ccc; }
+        .loading-text { color: #888; font-style: italic; }
     </style>
 </head>
 <body>
@@ -94,7 +95,7 @@
         <div class="playoff-kontajner">
             {% if vyradovacie_zapasy %}
                 {% for zapas in vyradovacie_zapasy %}
-                    <div class="zapas-karta-cl" onclick="toggleDetails('cl-detaily-{{ zapas.id }}')">
+                    <div class="zapas-karta-cl" onclick="toggleDetails('{{ zapas.id }}')">
                         <div>
                             <span class="faza-odznak">{{ zapas.faza_sk }}</span>
                             <div class="zapas-timy">
@@ -119,19 +120,15 @@
                         </div>
                     </div>
 
-                    <div id="cl-detaily-{{ zapas.id }}" class="zapas-detaily-cl">
+                    <div id="cl-detaily-{{ zapas.id }}" class="zapas-detaily-cl" data-loaded="false">
                         <div class="detail-title">🏟️ Štadión</div>
-                        <div class="detail-item">{{ zapas.venue }}</div>
+                        <div id="stadion-{{ zapas.id }}" class="detail-item loading-text">Načítavam...</div>
                         
                         <div class="detail-title">🏁 Rozhodca</div>
-                        <div class="detail-item">{{ zapas.referee }}</div>
+                        <div id="rozhodca-{{ zapas.id }}" class="detail-item loading-text">Načítavam...</div>
                         
                         <div class="detail-title">⭐ Strelci gólov</div>
-                        <div class="detail-item">
-                            {% for gol in zapas.goals %}
-                                <div>{{ gol }}</div>
-                            {% endfor %}
-                        </div>
+                        <div id="strelci-{{ zapas.id }}" class="detail-item loading-text">Načítavam...</div>
                     </div>
                 {% endfor %}
             {% else %}
@@ -145,11 +142,41 @@
     <br><br>
 
     <script>
-        function toggleDetails(id) {
-            let detailBox = document.getElementById(id);
-            if (detailBox) {
-                detailBox.style.display = (detailBox.style.display === "block") ? "none" : "block";
+        function toggleDetails(zapasId) {
+            let detailBox = document.getElementById(`cl-detaily-${zapasId}`);
+            if (!detailBox) return;
+
+            // Ak sa okno otvára a dáta ešte neboli stiahnuté, stiahneme ich z nášho nového API endpointu
+            if (detailBox.style.display !== "block" && detailBox.getAttribute("data-loaded") === "false") {
+                
+                fetch(`/api/zapas/${zapasId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById(`stadion-${zapasId}`).innerText = data.venue;
+                        document.getElementById(`stadion-${zapasId}`).classList.remove("loading-text");
+                        
+                        document.getElementById(`rozhodca-${zapasId}`).innerText = data.referee;
+                        document.getElementById(`rozhodca-${zapasId}`).classList.remove("loading-text");
+                        
+                        let strelciDiv = document.getElementById(`strelci-${zapasId}`);
+                        strelciDiv.innerHTML = ""; // Vyčistíme text "Načítavam..."
+                        strelciDiv.classList.remove("loading-text");
+                        
+                        data.goals.forEach(gol => {
+                            let r = document.createElement("div");
+                            r.innerText = gol;
+                            strelciDiv.appendChild(r);
+                        });
+                        
+                        detailBox.setAttribute("data-loaded", "true");
+                    })
+                    .catch(err => {
+                        console.log("Chyba pri načítaní detailu:", err);
+                    });
             }
+
+            // Prepíname zobrazenie skrytého boxu
+            detailBox.style.display = (detailBox.style.display === "block") ? "none" : "block";
         }
     </script>
 </body>

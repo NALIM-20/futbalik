@@ -99,6 +99,35 @@ def get_api_zapasy():
     zapasy = stiahni_realne_zapasy(vybrany_datum)
     return jsonify(zapasy)
 
+# 🔥 NOVÁ ROUTE PRE ZÍSKANIE DETAILU JEDNÉHO ZÁPASU (VRÁTANE STRELCOV)
+@app.route("/api/zapas/<int:zapas_id>")
+def ziskaj_detail_zapasu(zapas_id):
+    url = f"https://api.football-data.org/v4/matches/{zapas_id}"
+    headers = { "X-Auth-Token": API_KEY }
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            z = response.json()
+            
+            goals_list = []
+            for goal in z.get("goals", []):
+                minute = goal.get("minute")
+                p_name = goal.get("player", {}).get("name")
+                t_name = goal.get("team", {}).get("name")
+                goals_list.append(f"⚽ {minute}' {p_name} ({t_name})")
+                
+            if not goals_list:
+                goals_list = ["Zápas neskončil gólom alebo detaily nie sú dostupné."]
+                
+            return jsonify({
+                "venue": z.get("venue", "Neznámy štadión"),
+                "referee": z.get("referees", [{}])[0].get("name", "Neznámy rozhodca") if z.get("referees") else "Neznámy rozhodca",
+                "goals": goals_list
+            })
+    except Exception as e:
+        print(e)
+    return jsonify({"venue": "Neznámy štadión", "referee": "Neznámy", "goals": ["Chyba pri načítaní detailov"]})
+
 @app.route("/tabulka")
 @app.route("/tabulka/<liga_kod>")
 def tabulka(liga_kod="PL"):
@@ -145,17 +174,6 @@ def tabulka(liga_kod="PL"):
                             "SEMI_FINALS": "Semifinále",
                             "FINAL": "🏆 FINÁLE"
                         }
-                        
-                        # Spracovanie strelcov gólov pre Ligu majstrov
-                        goals_list = []
-                        for goal in zm.get("goals", []):
-                            minute = goal.get("minute")
-                            p_name = goal.get("player", {}).get("name")
-                            t_name = goal.get("team", {}).get("name")
-                            goals_list.append(f"⚽ {minute}' {p_name} ({t_name})")
-                        
-                        if not goals_list:
-                            goals_list = ["Žiadne góly alebo zápas ešte nezačal"]
 
                         vyradovacie_zapasy.append({
                             "id": zm.get("id"),
@@ -164,10 +182,7 @@ def tabulka(liga_kod="PL"):
                             "awayTeam": zm.get("awayTeam", {}).get("name", "Neznámy"),
                             "score_home": zm.get("score", {}).get("fullTime", {}).get("home"),
                             "score_away": zm.get("score", {}).get("fullTime", {}).get("away"),
-                            "status": zm.get("status"),
-                            "venue": zm.get("venue", "Neznámy štadión"),
-                            "referee": zm.get("referees", [{}])[0].get("name", "Neznámy rozhodca") if zm.get("referees") else "Neznámy rozhodca",
-                            "goals": goals_list
+                            "status": zm.get("status")
                         })
         except Exception as e:
             print(f"Chyba pri sťahovaní CL zápasov: {e}")
