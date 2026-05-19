@@ -110,7 +110,6 @@ def tabulka(liga_kod="PL"):
     stojisko = []
     vyradovacie_zapasy = []
     
-    # 1. Stiahnutie tabuľky
     try:
         response = requests.get(url_standings, headers=headers)
         if response.status_code == 200:
@@ -121,7 +120,6 @@ def tabulka(liga_kod="PL"):
     except:
         pass
 
-    # Ak API nedodalo dáta (záloha pre lokálny vývoj)
     if not stojisko:
         for i in range(1, 18):
             stojisko.append({
@@ -130,20 +128,16 @@ def tabulka(liga_kod="PL"):
                 "playedGames": 22, "won": 10, "draw": 6, "lost": 6, "points": 36
             })
 
-    # 2. Ak ide o Ligu Majstrov, stiahneme aj jej vyraďovacie zápasy
     if liga_kod == "CL":
         url_matches = f"https://api.football-data.org/v4/competitions/CL/matches"
         try:
             res_matches = requests.get(url_matches, headers=headers)
             if res_matches.status_code == 200:
                 vsetky_cl_zapasy = res_matches.json().get("matches", [])
-                
-                # Zadefinujeme si štádiá, ktoré patria do vyraďovačky (vylúčime ligovú fázu "REGULAR_SEASON")
                 fazy_playoff = ["PLAY_OFF_ROUND", "ROUND_OF_16", "QUARTER_FINALS", "SEMI_FINALS", "FINAL"]
                 
                 for zm in vsetky_cl_zapasy:
                     if zm.get("stage") in fazy_playoff:
-                        # Pekný preklad štádií do slovenčiny
                         preklady_faz = {
                             "PLAY_OFF_ROUND": "Play-off o osemfinále",
                             "ROUND_OF_16": "Osemfinále",
@@ -152,13 +146,28 @@ def tabulka(liga_kod="PL"):
                             "FINAL": "🏆 FINÁLE"
                         }
                         
+                        # Spracovanie strelcov gólov pre Ligu majstrov
+                        goals_list = []
+                        for goal in zm.get("goals", []):
+                            minute = goal.get("minute")
+                            p_name = goal.get("player", {}).get("name")
+                            t_name = goal.get("team", {}).get("name")
+                            goals_list.append(f"⚽ {minute}' {p_name} ({t_name})")
+                        
+                        if not goals_list:
+                            goals_list = ["Žiadne góly alebo zápas ešte nezačal"]
+
                         vyradovacie_zapasy.append({
+                            "id": zm.get("id"),
                             "faza_sk": preklady_faz.get(zm.get("stage"), zm.get("stage")),
                             "homeTeam": zm.get("homeTeam", {}).get("name", "Neznámy"),
                             "awayTeam": zm.get("awayTeam", {}).get("name", "Neznámy"),
                             "score_home": zm.get("score", {}).get("fullTime", {}).get("home"),
                             "score_away": zm.get("score", {}).get("fullTime", {}).get("away"),
-                            "status": zm.get("status")
+                            "status": zm.get("status"),
+                            "venue": zm.get("venue", "Neznámy štadión"),
+                            "referee": zm.get("referees", [{}])[0].get("name", "Neznámy rozhodca") if zm.get("referees") else "Neznámy rozhodca",
+                            "goals": goals_list
                         })
         except Exception as e:
             print(f"Chyba pri sťahovaní CL zápasov: {e}")
