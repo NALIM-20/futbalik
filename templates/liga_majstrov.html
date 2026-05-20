@@ -35,6 +35,9 @@
         
         .faza-odznak { font-size: 10px; font-weight: bold; color: #42a5f5; text-transform: uppercase; background: #1a237e; padding: 2px 6px; border-radius: 3px; margin-bottom: 4px; display: inline-block; }
         .zapas-timy { font-weight: 500; font-size: 15px; }
+        .tim-link { color: #fff; text-decoration: none; }
+        .tim-link:hover { color: #42a5f5; text-decoration: underline; }
+        
         .zapas-skore { font-weight: bold; font-size: 16px; color: #00e676; background: #1a1a1a; padding: 4px 10px; border-radius: 4px; min-width: 40px; text-align: center; }
         .status-info { font-size: 11px; color: #888; margin-left: 8px; text-transform: uppercase; }
 
@@ -80,7 +83,11 @@
                 {% for riadok in tabulka %}
                 <tr>
                     <td class="pos">{{ riadok.position }}</td>
-                    <td style="font-weight: bold;">⭐ {{ riadok.team.name }}</td>
+                    <td>
+                        <a href="/tabulka/tim/{{ riadok.team.id }}" class="tim-link" style="font-weight: bold;">
+                            ⭐ {{ riadok.team.name }}
+                        </a>
+                    </td>
                     <td style="text-align: center; color: #aaa;">{{ riadok.playedGames }}</td>
                     <td style="text-align: center; color: #aaa;">{{ riadok.won }}</td>
                     <td style="text-align: center; color: #aaa;">{{ riadok.draw }}</td>
@@ -99,7 +106,14 @@
                         <div>
                             <span class="faza-odznak">{{ zapas.faza_sk }}</span>
                             <div class="zapas-timy">
-                                ⚽ {{ zapas.homeTeam }} — {{ zapas.awayTeam }}
+                                ⚽ 
+                                <a href="/tabulka/tim/{{ zapas.homeTeam.id }}" class="tim-link" onclick="event.stopPropagation();">
+                                    {{ zapas.homeTeam.name }}
+                                </a> 
+                                — 
+                                <a href="/tabulka/tim/{{ zapas.awayTeam.id }}" class="tim-link" onclick="event.stopPropagation();">
+                                    {{ zapas.awayTeam.name }}
+                                </a>
                                 <span class="status-info">
                                     {% if zapas.status == 'IN_PLAY' or zapas.status == 'PAUSED' %}
                                         <span style="color: #ff3d00; font-weight: bold;">• Live</span>
@@ -146,20 +160,17 @@
             let detailBox = document.getElementById(`cl-detaily-${zapasId}`);
             if (!detailBox) return;
 
-            // Ak sa okno otvára a dáta ešte neboli stiahnuté, stiahneme ich z nášho nového API endpointu
             if (detailBox.style.display !== "block" && detailBox.getAttribute("data-loaded") === "false") {
-                
                 fetch(`/api/zapas/${zapasId}`)
                     .then(response => response.json())
                     .then(data => {
                         document.getElementById(`stadion-${zapasId}`).innerText = data.venue;
                         document.getElementById(`stadion-${zapasId}`).classList.remove("loading-text");
-                        
                         document.getElementById(`rozhodca-${zapasId}`).innerText = data.referee;
                         document.getElementById(`rozhodca-${zapasId}`).classList.remove("loading-text");
                         
                         let strelciDiv = document.getElementById(`strelci-${zapasId}`);
-                        strelciDiv.innerHTML = ""; // Vyčistíme text "Načítavam..."
+                        strelciDiv.innerHTML = "";
                         strelciDiv.classList.remove("loading-text");
                         
                         data.goals.forEach(gol => {
@@ -167,15 +178,10 @@
                             r.innerText = gol;
                             strelciDiv.appendChild(r);
                         });
-                        
                         detailBox.setAttribute("data-loaded", "true");
                     })
-                    .catch(err => {
-                        console.log("Chyba pri načítaní detailu:", err);
-                    });
+                    .catch(err => console.log(err));
             }
-
-            // Prepíname zobrazenie skrytého boxu
             detailBox.style.display = (detailBox.style.display === "block") ? "none" : "block";
         }
     </script>

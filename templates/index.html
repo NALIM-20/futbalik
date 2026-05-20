@@ -3,147 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <title>Futbalík.sk - Aktuálne futbalové výsledky a live zápasy</title>
-    <meta name="description" content="Sleduj live výsledky, tabuľky a detaily zápasov z Premier League, Bundesligy, La Ligy a Ligy majstrov na webe Futbalík.">
-    <meta name="keywords" content="futbalik, futbal, live vysledky, premier league, bundesliga, liga majstrov, flashscore slovensko">
-    <meta name="author" content="Futbalík Team">
-    
-    <meta name="google-site-verification" content="UlZJIwplXHVMiOXMWBEn4N7Qav7eJ0o7ihnLbc-UYTM" />
-
+    <title>Futbalík.sk - Live Výsledky</title>
     <style>
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #1a1a1a; color: #f5f5f5; padding: 20px; margin: 0; }
-        .container { max-width: 650px; margin: 0 auto; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #121212; color: #e0e0e0; padding: 20px; margin: 0; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { text-align: center; color: #00e676; font-size: 32px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         
-        h1 { text-align: center; color: #00e676; font-size: 36px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
-        .subtitle { text-align: center; color: #888; font-size: 14px; margin-bottom: 20px; }
-        
-        .btn-tabulka { display: inline-block; background: #333; color: #00e676; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: bold; transition: background 0.2s; }
-        .btn-tabulka:hover { background: #444; }
-        
-        .kalendar-dni { display: flex; gap: 5px; margin-bottom: 25px; background: #222; padding: 5px; border-radius: 6px; }
-        .den-btn { flex: 1; text-align: center; color: #aaa; background: transparent; padding: 10px 5px; text-decoration: none; font-size: 13px; font-weight: bold; border-radius: 4px; transition: all 0.2s; }
-        .den-btn:hover { background: #2a2a2a; color: #fff; }
-        .den-btn.active { background: #00e676; color: #121212; }
+        .hlavne-menu { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 12px 20px; border-radius: 6px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .tabulky-btn { background: #00e676; color: #121212; font-weight: bold; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 14px; transition: background 0.2s; }
+        .tabulky-btn:hover { background: #00b354; }
 
-        .sekcia-datum { font-size: 14px; font-weight: bold; text-transform: uppercase; color: #888; margin-top: 10px; margin-bottom: 10px; letter-spacing: 1px; }
+        .datumy-box { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
+        .datumy-box::-webkit-scrollbar { height: 4px; }
+        .datumy-box::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        .date-btn { background: #222; color: #aaa; padding: 8px 14px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; white-space: nowrap; border-bottom: 2px solid transparent; }
+        .date-btn:hover { background: #2a2a2a; color: #fff; }
+        .date-btn.active { background: #1b5e20; color: #00e676; border-bottom: 2px solid #00e676; }
 
-        .league-title { background: #2a2a2a; padding: 8px 15px; font-size: 12px; font-weight: bold; color: #aaa; border-left: 4px solid #00e676; text-transform: uppercase; margin-top: 20px; border-radius: 4px 4px 0 0; }
+        .liga-sekcia { background: #1e1e1e; border-radius: 6px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border-left: 4px solid #00e676; }
+        .liga-nazov { font-size: 14px; font-weight: bold; color: #00e676; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; border-bottom: 1px solid #2d2d2d; padding-bottom: 5px; }
         
-        .zapas-karta { background: #222; padding: 15px; border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: background 0.2s; }
-        .zapas-karta:last-of-type { border-radius: 0 0 4px 4px; }
-        .zapas-karta:hover { background: #292929; }
+        .zapas-riadok { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; border-bottom: 1px solid #2a2a2a; cursor: pointer; }
+        .zapas-riadok:last-child { border-bottom: none; }
+        .zapas-riadok:hover { background: #252525; }
         
-        .cas-sekcia { width: 15%; font-size: 13px; font-weight: bold; color: #888; text-align: center; }
-        .cas-sekcia.live { color: #ff3d00; animation: blink 1.5s infinite; }
-        .timy-sekcia { width: 65%; display: flex; flex-direction: column; gap: 6px; }
-        .tim-riadok { display: flex; align-items: center; font-size: 16px; }
-        .logo { margin-right: 10px; font-size: 14px; }
-        .skore-sekcia { width: 15%; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; font-size: 18px; font-weight: bold; padding-right: 10px; }
-        .skore-live { color: #00e676; }
+        .cas-box { width: 55px; font-size: 12px; font-weight: bold; color: #888; }
+        .cas-box.live-text { color: #ff3d00; animation: blikanie 1.5s infinite; }
         
-        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: bold; text-transform: uppercase; }
-        .badge-live { background: #ff3d00; color: white; }
-        .badge-koniec { background: #444; color: #aaa; }
-        .badge-plan { background: #555; color: #ddd; }
-        
-        .zapas-detaily { display: none; background: #1f1f1f; padding: 15px; border-bottom: 1px solid #333; font-size: 14px; border-left: 4px solid #ff3d00; }
-        .detail-item { margin-bottom: 8px; color: #ccc; }
-        .detail-title { font-weight: bold; color: #888; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
+        .timy-box { flex: 1; font-size: 15px; font-weight: 500; padding: 0 10px; }
+        /* 🔥 ŠTÝL PRE KLIKATEĽNÉ TÍMY NA HLAVNEJ STRÁNKE */
+        .tim-link { color: #e0e0e0; text-decoration: none; }
+        .tim-link:hover { color: #00e676; text-decoration: underline; }
 
-        .no-matches { text-align: center; color: #888; background: #222; padding: 40px 20px; border-radius: 6px; margin-top: 15px; border: 1px dashed #333; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .skore-box { font-size: 16px; font-weight: bold; color: #fff; background: #121212; padding: 4px 12px; border-radius: 4px; min-width: 45px; text-align: center; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+        .skore-box.live-skore { color: #00e676; border: 1px solid #1b5e20; }
+
+        .detaily-panel { display: none; background: #161616; padding: 15px; margin-top: 2px; border-radius: 4px; border: 1px solid #2d2d2d; font-size: 13px; color: #bbb; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); }
+        .detaily-panel p { margin: 4px 0; }
+        .goly-list { margin-top: 8px; padding-left: 5px; border-left: 2px solid #ff3d00; }
+
+        @keyframes blikanie { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>⚽ FUTBALÍK</h1>
-        <p class="subtitle">Tvoj vlastný športový portál s reálnymi dátami</p>
-
-        <div style="text-align: center; margin-bottom: 25px;">
-            <a href="/tabulka" class="btn-tabulka">📊 Zobraziť Ligové Tabuľky</a>
+        <h1>⚽ Futbalík.sk</h1>
+        
+        <div class="hlavne-menu">
+            <span style="font-weight: bold; font-size: 15px;">Dnešný prehľad výsledkov</span>
+            <a href="/tabulka" class="tabulky-btn">📊 Ligové Tabuľky</a>
         </div>
 
-        <div class="kalendar-dni">
-            {% for den in dni_menu %}
-                <a href="/?date={{ den.datum_url }}" class="den-btn {% if den.datum_url == aktualny_datum %}active{% endif %}">
-                    {{ den.pekny_nazov }}
+        <div class="datumy-box">
+            {% for d in dni_menu %}
+                <a href="/?date={{ d.datum_url }}" class="date-btn {% if d.datum_url == aktualny_datum %}active{% endif %}">
+                    {{ d.pekny_nazov }}
                 </a>
             {% endfor %}
         </div>
-
-        <div class="sekcia-datum">📅 Zápasy pre deň: <span style="color: #fff;">{{ povedz_datum }}</span></div>
+        
+        <p style="color: #666; font-size: 13px; margin-top: 15px; font-weight: 500;">Zápasy pre dátum: <span style="color: #fff;">{{ povedz_datum }}</span></p>
 
         {% if zápasy %}
-            {% for zapas in zápasy %}
-                <div class="league-title">{{ zapas.league }}</div>
-                
-                <div class="zapas-karta" onclick="toggleDetails('detaily-{{ zapas.id }}')">
-                    <div class="cas-sekcia {% if zapas.status == 'LIVE' %}live{% endif %}">
-                        {{ zapas.minute }}
-                        <br>
-                        <span class="status-badge {% if zapas.status == 'LIVE' %}badge-live{% elif zapas.status == 'FINISHED' %}badge-koniec{% else %}badge-plan{% endif %}">
-                            {% if zapas.status == 'LIVE' %}Live{% elif zapas.status == 'FINISHED' %}Koniec{% else %}Plán{% endif %}
-                        </span>
-                    </div>
+            {% set zobrazene_ligy = [] %}
+            {% for z in zápasy %}
+                {% if z.league not in zobrazene_ligy %}
+                    {% if zobrazene_ligy.append(z.league) %}{% endif %}
                     
-                    <div class="timy-sekcia">
-                        <div class="tim-riadok"><span class="logo">{{ zapas.homeTeam.logo }}</span> {{ zapas.homeTeam.name }}</div>
-                        <div class="tim-riadok"><span class="logo">{{ zapas.awayTeam.logo }}</span> {{ zapas.awayTeam.name }}</div>
-                    </div>
-                    
-                    <div class="skore-sekcia {% if zapas.status == 'LIVE' %}skore-live{% endif %}">
-                        <div id="skore-home-{{ zapas.id }}">{% if zapas.score.home is not none %}{{ zapas.score.home }}{% else %}-{% endif %}</div>
-                        <div id="skore-away-{{ zapas.id }}">{% if zapas.score.away is not none %}{{ zapas.score.away }}{% else %}-{% endif %}</div>
-                    </div>
-                </div>
-
-                <div id="detaily-{{ zapas.id }}" class="zapas-detaily">
-                    <div class="detail-title">🏟️ Štadión</div>
-                    <div class="detail-item">{{ zapas.details.venue }}</div>
-                    
-                    <div class="detail-title">🏁 Rozhodca</div>
-                    <div class="detail-item">{{ zapas.details.referee }}</div>
-                    
-                    <div class="detail-title">⭐ Udalosti / Strelci</div>
-                    <div class="detail-item">
-                        {% for gól in zapas.details.goals %}
-                            <div>{{ gól }}</div>
+                    <div class="liga-sekcia">
+                        <div class="liga-nazov">🏆 {{ z.league }}</div>
+                        
+                        {% for zápas in zápasy if zápas.league == z.league %}
+                            <div class="zapas-riadok" onclick="rozbalDetail('{{ zápas.id }}', event)">
+                                <div class="cas-box {% if zápas.status == 'LIVE' %}live-text{% endif %}">
+                                    {{ zápas.minute }}
+                                </div>
+                                <div class="timy-box">
+                                    <a href="/tabulka/tim/{{ zápas.homeTeam.id }}" class="tim-link" onclick="event.stopPropagation();">
+                                        {{ zápas.homeTeam.name }}
+                                    </a> 
+                                    — 
+                                    <a href="/tabulka/tim/{{ zápas.awayTeam.id }}" class="tim-link" onclick="event.stopPropagation();">
+                                        {{ zápas.awayTeam.name }}
+                                    </a>
+                                </div>
+                                <div class="skore-box {% if zápas.status == 'LIVE' %}live-skore{% endif %}">
+                                    {% if zápas.score.home is not none %}
+                                        {{ zápas.score.home }} : {{ zápas.score.away }}
+                                    {% else %}
+                                        - : -
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div id="detail-{{ zápas.id }}" class="detaily-panel" data-loaded="false">
+                                <p>🏟️ <b>Štadión:</b> <span id="stadion-{{ zápas.id }}">Načítavam...</span></p>
+                                <p>🏁 <b>Rozhodca:</b> <span id="rozhodca-{{ zápas.id }}">Načítavam...</span></p>
+                                <div class="goly-list">
+                                    <b>⚽ Strelci gólov:</b>
+                                    <div id="strelci-{{ zápas.id }}">Načítavam...</div>
+                                </div>
+                            </div>
                         {% endfor %}
                     </div>
-                </div>
+                {% endif %}
             {% endfor %}
         {% else %}
-            <div class="no-matches">
-                <p style="font-size: 24px; margin: 0 0 10px 0;">📭 Žiadne zápasy</p>
-                <p style="margin: 0; color: #666; font-size: 14px;">Pre vybraný deň nie sú v sledovaných ligách naplánované žiadne stretnutia.</p>
+            <div style="text-align: center; padding: 40px; background: #1e1e1e; border-radius: 6px; color: #666; font-style: italic;">
+                📭 Na tento deň nie sú v systéme žiadne zápasy.
             </div>
         {% endif %}
     </div>
 
     <script>
-        function toggleDetails(id) {
-            let detailBox = document.getElementById(id);
-            detailBox.style.display = (detailBox.style.display === "block") ? "none" : "block";
-        }
+        function rozbalDetail(id, event) {
+            let panel = document.getElementById('detail-' + id);
+            if (!panel) return;
 
-        function aktualizujZapas() {
-            fetch('/api/zapasy?date={{ aktualny_datum }}')
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(zapas => {
-                        let homeDiv = document.getElementById(`skore-home-${zapas.id}`);
-                        let awayDiv = document.getElementById(`skore-away-${zapas.id}`);
+            if (panel.style.display !== 'block' && panel.getAttribute('data-loaded') === 'false') {
+                fetch('/api/zapas/' + id)
+                    .then(res => res.json())
+                    .then(data => {
+                        document.getElementById('stadion-' + id).innerText = data.venue;
+                        document.getElementById('rozhodca-' + id).innerText = data.referee;
                         
-                        if(homeDiv && zapas.score.home !== null) homeDiv.innerText = zapas.score.home;
-                        if(awayDiv && zapas.score.away !== null) awayDiv.innerText = zapas.score.away;
-                    });
-                })
-                .catch(err => console.log("Chyba pri aktualizácii:", err));
-        }
-        setInterval(aktualizujZapas, 15000);
-    </script>
+                        let strelciDiv = document.getElementById('strelci-' + id);
+                        strelciDiv.innerHTML = "";
+                        data.goals.forEach(g => {
+                            let d = document.createElement('div');
+                            d.innerText = g;
+                            strelciDiv.appendChild(d);
+                        });
+                        panel.setAttribute('data-loaded', 'true');
+                    })
+                    .catch(err => console.log(err));
+            }
 
+            panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+        }
+    </script>
 </body>
 </html>

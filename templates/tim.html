@@ -11,6 +11,7 @@
         .hlavicka-klub { background: #222; padding: 25px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-bottom: 4px solid #00e676; text-align: center; margin-bottom: 25px; }
         .hlavicka-klub h1 { margin: 10px 0 5px 0; color: #fff; font-size: 32px; }
         .info-pruhy { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; color: #aaa; font-size: 14px; margin-top: 10px; }
+        .trener-box { font-size: 16px; margin-top: 12px; color: #00e676; font-weight: bold; background: #1a1a1a; padding: 5px 15px; border-radius: 20px; display: inline-block; border: 1px solid #2d2d2d; }
         
         .sekcia-box { background: #222; padding: 20px; border-radius: 6px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .sekcia-nadpis { color: #00e676; font-size: 18px; margin-top: 0; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 5px; }
@@ -22,7 +23,6 @@
         .hrac-riadok:hover { background: #292929; }
         .hrac-narodnost { color: #888; font-size: 13px; }
 
-        /* Zápasy štýly */
         .zapas-vysledok-tab { width: 100%; border-collapse: collapse; margin-top: 5px; }
         .zapas-vysledok-tab td { padding: 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
         .zapas-vysledok-tab tr:hover { background: #292929; }
@@ -38,7 +38,7 @@
 
     <div class="container">
         
-        <a href="javascript:history.back()" class="btn-back">⬅ Späť na Tabuľku</a>
+        <a href="javascript:history.back()" class="btn-back">⬅ Späť</a>
 
         <div class="hlavicka-klub">
             <div style="font-size: 40px;">🛡️</div>
@@ -48,6 +48,7 @@
                 <span>🎨 <b>Farby:</b> {{ tim.clubColors if tim.clubColors else 'Neznáme' }}</span>
                 <span>🌍 <b>Založený:</b> {{ tim.founded if tim.founded else 'Neznámy rok' }}</span>
             </div>
+            <div class="trener-box">👔 Hlavný tréner: {{ trener }}</div>
         </div>
 
         <div class="sekcia-box">

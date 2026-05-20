@@ -31,6 +31,31 @@ TROFEJE_KLUBOV = {
     "Atlético Madrid": "11x La Liga, 10x Copa del Rey, 3x Európska liga"
 }
 
+# 🛡️ Záchranná reálna súpiska pre Real Madrid (keďže API posiela bludy)
+REAL_MADRID_SQUAD_FIX = [
+    {"name": "Thibaut Courtois", "position": "Goalkeeper", "nationality": "Belgium"},
+    {"name": "Andriy Lunin", "position": "Goalkeeper", "nationality": "Ukraine"},
+    {"name": "Éder Militão", "position": "Defender", "nationality": "Brazil"},
+    {"name": "Antonio Rüdiger", "position": "Defender", "nationality": "Germany"},
+    {"name": "David Alaba", "position": "Defender", "nationality": "Austria"},
+    {"name": "Dani Carvajal", "position": "Defender", "nationality": "Spain"},
+    {"name": "Ferland Mendy", "position": "Defender", "nationality": "France"},
+    {"name": "Fran García", "position": "Defender", "nationality": "Spain"},
+    {"name": "Lucas Vázquez", "position": "Defender", "nationality": "Spain"},
+    {"name": "Jude Bellingham", "position": "Midfielder", "nationality": "England"},
+    {"name": "Federico Valverde", "position": "Midfielder", "nationality": "Uruguay"},
+    {"name": "Eduardo Camavinga", "position": "Midfielder", "nationality": "France"},
+    {"name": "Aurélien Tchouaméni", "position": "Midfielder", "nationality": "France"},
+    {"name": "Luka Modrić", "position": "Midfielder", "nationality": "Croatia"},
+    {"name": "Dani Ceballos", "position": "Midfielder", "nationality": "Spain"},
+    {"name": "Arda Güler", "position": "Midfielder", "nationality": "Turkey"},
+    {"name": "Vinícius Júnior", "position": "Forward", "nationality": "Brazil"},
+    {"name": "Kylian Mbappé", "position": "Forward", "nationality": "France"},
+    {"name": "Rodrygo", "position": "Forward", "nationality": "Brazil"},
+    {"name": "Brahim Díaz", "position": "Forward", "nationality": "Morocco"},
+    {"name": "Endrick", "position": "Forward", "nationality": "Brazil"}
+]
+
 def stiahni_realne_zapasy(vybrany_datum):
     url = f"https://api.football-data.org/v4/matches?dateFrom={vybrany_datum}&dateTo={vybrany_datum}"
     headers = { "X-Auth-Token": API_KEY }
@@ -62,8 +87,9 @@ def stiahni_realne_zapasy(vybrany_datum):
 
             spracovane_zapasy.append({
                 "id": z.get("id"),
-                "homeTeam": {"id": z.get("homeTeam", {}).get("id"), "name": z.get("homeTeam", {}).get("name", "Neznámy"), "logo": "⚽"},
-                "awayTeam": {"id": z.get("awayTeam", {}).get("id"), "name": z.get("awayTeam", {}).get("name", "Neznámy"), "logo": "⚽"},
+                # 🔥 PRIDANÉ ID TÍMOV PRE KLIKATEĽNOSŤ NA HLAVNEJ STRÁNKE
+                "homeTeam": {"id": z.get("homeTeam", {}).get("id"), "name": z.get("homeTeam", {}).get("name", "Neznámy")},
+                "awayTeam": {"id": z.get("awayTeam", {}).get("id"), "name": z.get("awayTeam", {}).get("name", "Neznámy")},
                 "score": {"home": z.get("score", {}).get("fullTime", {}).get("home"), "away": z.get("score", {}).get("fullTime", {}).get("away")},
                 "status": nas_status, "minute": minuta, "league": z.get("competition", {}).get("name", "Ostatné ligy"),
                 "details": {"venue": z.get("venue", "Neznámy štadión"), "referee": z.get("referees", [{}])[0].get("name", "Neznámy") if z.get("referees") else "Neznámy", "goals": goals_list}
@@ -100,7 +126,6 @@ def ziskaj_detail_zapasu(zapas_id):
     except: pass
     return jsonify({"venue": "Neznámy štadión", "referee": "Neznámy", "goals": ["Chyba rozhrania API"]})
 
-# 🔥 AKTUALIZOVANÁ ROUTE PRE PROFIL TÍMU (SÚPISKY + HISTÓRIA ZÁPASOV)
 @app.route("/tabulka/tim/<int:tim_id>")
 def profil_timu(tim_id):
     headers = { "X-Auth-Token": API_KEY }
@@ -111,23 +136,43 @@ def profil_timu(tim_id):
     odohrane = []
     naplanovane = []
     trofeje = "Klub má na konte domáce tituly a pohárové úspechy."
+    trener = "Neznámy (Nedodané cez API)"
 
-    # 1. Stiahneme základný profil tímu a súpisku
+    # Tréneri natvrdo pre top tímy, keďže ich free API vymazalo
+    TRENERI = {
+        86: "Carlo Ancelotti",      # Real Madrid
+        81: "Hansi Flick",          # Barcelona
+        65: "Pep Guardiola",        # Manchester City
+        64: "Arne Slot",            # Liverpool
+        57: "Rúben Amorim",         # Manchester United
+        521: "Vincent Kompany",     # Bayern
+        524: "Nuri Şahin",          # Dortmund
+        98: "Luis Enrique",         # PSG
+        109: "Thiago Motta",        # Juventus
+        110: "Simone Inzaghi",      # Inter Milan
+        113: "Paulo Fonseca",       # AC Milan
+        78: "Diego Simeone"         # Atlético Madrid
+    }
+    
+    trener = TRENERI.get(tim_id, trener)
+
     try:
         res_team = requests.get(url_team, headers=headers)
         if res_team.status_code == 200:
             tim_data = res_team.json()
             nazov_klubu = tim_data.get("name", "")
             trofeje = TROFEJE_KLUBOV.get(nazov_klubu, trofeje)
+            
+            # 🔥 OPRAVA SÚPISKY PRE REAL MADRID
+            if tim_id == 86:
+                tim_data["squad"] = REAL_MADRID_SQUAD_FIX
     except Exception as e:
         print(f"Chyba profilu tímu: {e}")
 
-    # 2. Stiahneme históriu a budúce zápasy klubu
     try:
         res_matches = requests.get(url_matches, headers=headers)
         if res_matches.status_code == 200:
             vsetky_zapasy = res_matches.json().get("matches", [])
-            
             for m in vsetky_zapasy:
                 status = m.get("status")
                 datum_raw = m.get("utcDate", "")
@@ -141,26 +186,23 @@ def profil_timu(tim_id):
                     "score_home": m.get("score", {}).get("fullTime", {}).get("home"),
                     "score_away": m.get("score", {}).get("fullTime", {}).get("away")
                 }
-                
                 if status == "FINISHED":
                     odohrane.append(zapas_info)
                 else:
                     zapas_info["cas"] = datetime.strptime(datum_raw, "%Y-%m-%dT%H:%M:%SZ").strftime("%H:%M") if datum_raw else ""
                     naplanovane.append(zapas_info)
-            
-            # Zoradíme odohrané od najnovších a naplánované od najbližších
             odohrane.reverse()
     except Exception as e:
         print(f"Chyba zápasov tímu: {e}")
 
     if not tim_data:
-        return "Chyba pri načítaní profilu tímu. Skontrolujte limit API požiadaviek.", 404
+        return "Chyba pri načítaní profilu tímu.", 404
 
-    # Zoberieme iba top 5 z každého soudka
     return render_template(
         "tim.html", 
         tim=tim_data, 
         trofeje=trofeje, 
+        trener=trener,
         posledne_zapasy=odohrane[:5], 
         nasledujuce_zapasy=naplanovane[:5]
     )
@@ -192,7 +234,9 @@ def tabulka(liga_kod="PL"):
                     if zm.get("stage") in fazy_playoff:
                         vyradovacie_zapasy.append({
                             "id": zm.get("id"), "faza_sk": preklady_faz.get(zm.get("stage"), zm.get("stage")),
-                            "homeTeam": zm.get("homeTeam", {}).get("name", "Neznámy"), "awayTeam": zm.get("awayTeam", {}).get("name", "Neznámy"),
+                            # 🔥 PRIDANÉ AJ ID TÍMOV PRE LIGU MAJSTROV
+                            "homeTeam": {"id": zm.get("homeTeam", {}).get("id"), "name": zm.get("homeTeam", {}).get("name")},
+                            "awayTeam": {"id": zm.get("awayTeam", {}).get("id"), "name": zm.get("awayTeam", {}).get("name")},
                             "score_home": zm.get("score", {}).get("fullTime", {}).get("home"), "score_away": zm.get("score", {}).get("fullTime", {}).get("away"), "status": zm.get("status")
                         })
         except: pass
