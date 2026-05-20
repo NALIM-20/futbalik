@@ -5,7 +5,7 @@ import requests
 
 app = Flask(__name__)
 
-# Tvoj overený API kľúč
+# Tvoj overený API kľúč, s ktorým všetko išlo
 API_KEY = "0353c89659b9409bbba986dc1555a1d7"
 BASE_URL = "https://api.football-data.org/v4"
 HEADERS = {"X-Auth-Token": API_KEY}
@@ -128,10 +128,10 @@ def index():
     except:
         povedz_datum = zvoleny_datum_str
 
-    # Bezpečný názov premennej bez diakritiky pre HTML šablónu
+    # Návrat k pôvodnej premennej 'zápasy' s dĺžňom
     return render_template(
         "index.html", 
-        zapasy=spracovane_zapasy, 
+        zápasy=spracovane_zapasy, 
         dni_menu=dni_menu, 
         aktualny_datum=zvoleny_datum_str,
         povedz_datum=povedz_datum
@@ -209,16 +209,15 @@ def profil_timu(tim_id):
         for m in zapasy_data["matches"]:
             raw_date = m.get("utcDate", "")
             pekny_datum = raw_date[:10] if len(raw_date) >= 10 else raw_date
+            sutaz = m.get("competition", {}).get("name", "Súťaž")
+            domaci = m.get("homeTeam", {}).get("name", "Neznámy")
+            hostia = m.get("awayTeam", {}).get("name", "Neznámy")
+            goly_d = m.get("score", {}).get("fullTime", {}).get("home")
+            goly_h = m.get("score", {}).get("fullTime", {}).get("away")
             
-            posledne_zapasy.append({
-                "id": m.get("id"),
-                "datum": pekny_datum,
-                "sutaz": m.get("competition", {}).get("name", "Súťaž"),
-                "homeTeam": m.get("homeTeam", {}).get("name", "Neznámy"),
-                "awayTeam": m.get("awayTeam", {}).get("name", "Neznámy"),
-                "score_home": m.get("score", {}).get("fullTime", {}).get("home"),
-                "score_away": m.get("score", {}).get("fullTime", {}).get("away")
-            })
+            # Pôvodný textový formát formy zápasov
+            text_zapasu = f"{pekny_datum} ({sutaz}): {domaci} {goly_d}:{goly_h} {hostia}"
+            posledne_zapasy.append(text_zapasu)
 
     return render_template(
         "tim.html", 
@@ -249,14 +248,12 @@ def api_detail_zapasu(zapas_id):
             minuta = g.get("minute", "?")
             strelec = g.get("scorer", {}).get("name", "Neznámy hráč")
             tim_golu = g.get("team", {}).get("name", "Tím")
-            
             typ = g.get("type", "REGULAR")
             doplnok = ""
             if typ == "PENALTY":
                 doplnok = " (penalta)"
             elif typ == "OWN":
                 doplnok = " (vlastný gól)"
-
             zoznam_golov.append(f"{minuta}' [{tim_golu}] {strelec}{doplnok}")
 
     stadion = match_core.get("venue", "Neznámy")

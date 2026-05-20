@@ -117,12 +117,6 @@
             justify-content: space-between;
             align-items: center;
             padding: 15px 20px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .match-header:hover {
-            background-color: #1c3326;
         }
 
         .league-tag {
@@ -163,30 +157,6 @@
             font-size: 0.95rem;
         }
 
-        .match-detail {
-            display: none;
-            background-color: #0e1a13;
-            padding: 15px 20px;
-            border-top: 1px solid #1b3d29;
-            font-size: 0.9rem;
-        }
-
-        .detail-section {
-            margin-bottom: 10px;
-        }
-
-        .detail-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .detail-title {
-            font-weight: bold;
-            color: var(--text-muted);
-            margin-bottom: 5px;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-        }
-
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -218,10 +188,10 @@
 
     <h2>Zápasy dňa ({{ povedz_datum }})</h2>
 
-    {% if zapasy %}
-        {% for z in zapasy %}
+    {% if zápasy %}
+        {% for z in zápasy %}
             <div class="match-card">
-                <div class="match-header" onclick="toggleZapasDetail('{{ z.id }}', this)">
+                <div class="match-header">
                     <div>
                         <div class="league-tag">{{ z.league }}</div>
                         <div class="teams-container">{{ z.homeTeam.name }} vs {{ z.awayTeam.name }}</div>
@@ -243,61 +213,12 @@
                         </div>
                     {% endif %}
                 </div>
-                
-                <div class="match-detail">
-                    <div style="text-align: center; color: var(--text-muted);">Načítavam detaily zápasu...</div>
-                </div>
             </div>
         {% endfor %}
     {% else %}
         <p style="text-align: center; color: var(--text-muted); margin-top: 40px;">Na tento deň nie sú naplánované žiadne zápasy zo sledovaných líg.</p>
     {% endif %}
 </div>
-
-<script>
-function toggleZapasDetail(zapasId, headerElement) {
-    const detailDiv = headerElement.nextElementSibling;
-    
-    if (detailDiv.style.display === 'block') {
-        detailDiv.style.display = 'none';
-        return;
-    }
-    
-    detailDiv.style.display = 'block';
-    
-    if (!zapasId || zapasId === 'None') {
-        detailDiv.innerHTML = '<div style="color: var(--text-muted);">Detaily nie sú pre tento zápas k dispozícii.</div>';
-        return;
-    }
-    
-    fetch(`/api/zapas/${zapasId}`)
-        .then(response => response.json())
-        .then(data => {
-            let goalsHtml = '';
-            if (data.goals && data.goals.length > 0 && !data.goals[0].includes("Detaily gólov nie sú k dispozícii")) {
-                data.goals.forEach(goal => {
-                    goalsHtml += `<div style="margin: 4px 0;">${goal}</div>`;
-                });
-            } else {
-                goalsHtml = '<div style="color: #6ee7b7; opacity: 0.7;">Žiadne zaznamenané góly.</div>';
-            }
-
-            detailDiv.innerHTML = `
-                <div class="detail-section">
-                    <div class="detail-title">Strelci gólov</div>
-                    ${goalsHtml}
-                </div>
-                <div class="detail-section" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 20px; font-size: 0.85rem; color: #6ee7b7; opacity: 0.8; border-top: 1px solid #1b3d29; padding-top: 8px;">
-                    <div>Štadión: ${data.venue || 'Neznámy'}</div>
-                    <div>Rozhodca: ${data.referee || 'Neznámy'}</div>
-                </div>
-            `;
-        })
-        .catch(() => {
-            detailDiv.innerHTML = '<div style="color: #ef4444;">Nepodarilo sa načítať detaily z API.</div>';
-        });
-}
-</script>
 
 </body>
 </html>
