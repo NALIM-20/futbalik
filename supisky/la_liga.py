@@ -1,6 +1,6 @@
-# Súbor pre ručné opravy súpisiek top tímov
+# Súpisky pre španielsku La Ligu (Competition Code: PD)
 
-RUČNÉ_SÚPISKY = {
+LA_LIGA_SÚPISKY = {
     # --- REAL MADRID (ID: 86) ---
     86: [
         {"name": "Thibaut Courtois", "position": "Goalkeeper", "nationality": "Belgium"},
@@ -43,8 +43,5 @@ RUČNÉ_SÚPISKY = {
         {"name": "Robert Lewandowski", "position": "Forward", "nationality": "Poland"},
         {"name": "Raphinha", "position": "Forward", "nationality": "Brazil"},
         {"name": "Ferran Torres", "position": "Forward", "nationality": "Spain"}
-    ],
-
-    # Sem môžeš do budúcna pridávať ďalšie tímy podľa formátu:
-    # ID_TIMU: [ {"name": "Meno", "position": "Goalkeeper/Defender/Midfielder/Forward", "nationality": "Národnosť"}, ... ]
+    ]
 }
