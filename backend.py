@@ -2,270 +2,86 @@ import os
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify
 import requests
+from supisky import RUČNÉ_SÚPISKY 
 
 app = Flask(__name__)
 
-# Tvoj overený API kľúč, s ktorým všetko išlo
+# Konfigurácia
 API_KEY = "0353c89659b9409bbba986dc1555a1d7"
 BASE_URL = "https://api.football-data.org/v4"
 HEADERS = {"X-Auth-Token": API_KEY}
-
-LEAGUES = {
-    "PL": "Premier League",
-    "PD": "La Liga",
-    "BL1": "Bundesliga",
-    "SA": "Serie A",
-    "FL1": "Ligue 1",
-    "CL": "Champions League"
-}
+LEAGUES = {"PL": "Premier League", "PD": "La Liga", "BL1": "Bundesliga", "SA": "Serie A", "FL1": "Ligue 1", "CL": "Champions League"}
 
 cache = {}
 
-def get_cached_data(cache_key, url, expiry_minutes=10):
-    now = datetime.now()
+def get_cached_data(cache_key, url):
     if cache_key in cache:
         data, timestamp = cache[cache_key]
-        if now - timestamp < timedelta(minutes=expiry_minutes):
+        if datetime.now() - timestamp < timedelta(minutes=15):
             return data
-    
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code == 200:
             data = response.json()
-            cache[cache_key] = (data, now)
+            cache[cache_key] = (data, datetime.now())
             return data
-    except Exception as e:
-        print(f"Chyba pri volaní API: {e}")
-    
-    if cache_key in cache:
-        return cache[cache_key][0]
+    except: pass
     return None
 
-def preloz_fazu_ucl(stage_en):
-    prevody = {
-        "PRELIMINARY_ROUND": "Predkolo",
-        "QUALIFYING_ROUND": "Kvalifikácia",
-        "PLAYOFF_ROUND": "Play-off",
-        "LEAGUE_STAGE": "Ligová fáza",
-        "ROUND_OF_16": "Osemfinále",
-        "QUARTER_FINALS": "Štvrťfinále",
-        "SEMI_FINALS": "Semifinále",
-        "FINAL": "Finále"
-    }
-    return prevody.get(stage_en, stage_en)
+def preloz_fazu_ucl(stage):
+    return {"PRELIMINARY_ROUND": "Predkolo", "PLAYOFF_ROUND": "Play-off", "LEAGUE_STAGE": "Ligová fáza", "ROUND_OF_16": "Osemfinále", "QUARTER_FINALS": "Štvrťfinále", "SEMI_FINALS": "Semifinále", "FINAL": "Finále"}.get(stage, stage)
 
 @app.route("/")
 def index():
-    zvoleny_datum_str = request.args.get("date")
-    dnes = datetime.now()
-    
-    if not zvoleny_datum_str:
-        zvoleny_datum_str = dnes.strftime("%Y-%m-%d")
-    
-    dni_menu = []
-    start_den = dnes - timedelta(days=1)
-    for i in range(5):
-        den = start_den + timedelta(days=i)
-        url_format = den.strftime("%Y-%m-%d")
-        
-        if url_format == dnes.strftime("%Y-%m-%d"):
-            pekny_nazov = "Dnes"
-        elif url_format == (dnes - timedelta(days=1)).strftime("%Y-%m-%d"):
-            pekny_nazov = "Včera"
-        elif url_format == (dnes + timedelta(days=1)).strftime("%Y-%m-%d"):
-            pekny_nazov = "Zajtra"
-        else:
-            pekny_nazov = den.strftime("%d.%m.")
-            
-        dni_menu.append({"datum_url": url_format, "pekny_nazov": pekny_nazov})
-
-    url = f"{BASE_URL}/matches?dateFrom={zvoleny_datum_str}&dateTo={zvoleny_datum_str}"
-    cache_key = f"matches_{zvoleny_datum_str}"
-    data = get_cached_data(cache_key, url, expiry_minutes=2)
-    
-    spracovane_zapasy = []
+    datum = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
+    data = get_cached_data(f"matches_{datum}", f"{BASE_URL}/matches?date={datum}")
+    zápasy = []
     if data and "matches" in data:
         for m in data["matches"]:
-            kod_ligy = m.get("competition", {}).get("code")
-            if kod_ligy in LEAGUES:
-                status_raw = m.get("status")
-                
-                if status_raw in ["LIVE", "IN_PLAY", "PAUSED"]:
-                    status = "LIVE"
-                    minute = f"{m.get('minute', '??')}'"
-                elif status_raw == "FINISHED":
-                    status = "FINISHED"
-                    minute = "Koniec"
-                else:
-                    status = "SCHEDULED"
-                    utc_date_str = m.get("utcDate")
-                    if utc_date_str:
-                        try:
-                            dt = datetime.strptime(utc_date_str, "%Y-%m-%dT%H:%M:%SZ")
-                            dt_sk = dt + timedelta(hours=2)
-                            minute = dt_sk.strftime("%H:%M")
-                        except:
-                            minute = utc_date_str[11:16]
-                    else:
-                        minute = "--:--"
-
-                spracovane_zapasy.append({
-                    "id": m.get("id"),
-                    "league": LEAGUES[kod_ligy],
-                    "homeTeam": {"name": m.get("homeTeam", {}).get("name", "Neznámy")},
-                    "awayTeam": {"name": m.get("awayTeam", {}).get("name", "Neznámy")},
-                    "score": {
-                        "home": m.get("score", {}).get("fullTime", {}).get("home"),
-                        "away": m.get("score", {}).get("fullTime", {}).get("away")
-                    },
-                    "status": status,
-                    "minute": minute
+            if m["competition"]["code"] in LEAGUES:
+                zápasy.append({
+                    "id": m["id"], "league": LEAGUES[m["competition"]["code"]],
+                    "homeTeam": m["homeTeam"], "awayTeam": m["awayTeam"],
+                    "score": m["score"]["fullTime"], "status": m["status"], "minute": m.get("minute")
                 })
-
-    try:
-        obj_dat = datetime.strptime(zvoleny_datum_str, "%Y-%m-%d")
-        povedz_datum = obj_dat.strftime("%d.%m.%Y")
-    except:
-        povedz_datum = zvoleny_datum_str
-
-    # Návrat k pôvodnej premennej 'zápasy' s dĺžňom
-    return render_template(
-        "index.html", 
-        zápasy=spracovane_zapasy, 
-        dni_menu=dni_menu, 
-        aktualny_datum=zvoleny_datum_str,
-        povedz_datum=povedz_datum
-    )
+    return render_template("index.html", zápasy=zápasy, aktualny_datum=datum, povedz_datum=datum)
 
 @app.route("/tabulka/<liga_kod>")
 def tabulka_ligy(liga_kod):
-    if liga_kod not in LEAGUES:
-        return "Nepodporovaná liga", 404
-
-    url = f"{BASE_URL}/competitions/{liga_kod}/standings"
-    cache_key = f"standings_{liga_kod}"
-    data = get_cached_data(cache_key, url, expiry_minutes=15)
-
     if liga_kod == "CL":
-        tabulka_data = []
-        if data and "standings" in data:
-            for st in data["standings"]:
-                if st.get("type") == "TOTAL":
-                    tabulka_data = st.get("table", [])
-                    break
-        
-        url_zapasy = f"{BASE_URL}/competitions/CL/matches?status=FINISHED,LIVE,SCHEDULED"
-        cache_key_zapasy = "ucl_playoff_matches"
-        data_zapasy = get_cached_data(cache_key_zapasy, url_zapasy, expiry_minutes=10)
-        
+        data = get_cached_data("standings_CL", f"{BASE_URL}/competitions/CL/standings")
+        matches = get_cached_data("matches_CL", f"{BASE_URL}/competitions/CL/matches")
+        tabulka = data["standings"][0]["table"] if data else []
         vyradovacie = []
-        if data_zapasy and "matches" in data_zapasy:
-            for m in data_zapasy["matches"]:
-                faza = m.get("stage")
-                if faza and faza != "LEAGUE_STAGE":
-                    vyradovacie.append({
-                        "id": m.get("id"),
-                        "faza_sk": preloz_fazu_ucl(faza),
-                        "homeTeam": {"name": m.get("homeTeam", {}).get("name", "TBD")},
-                        "awayTeam": {"name": m.get("awayTeam", {}).get("name", "TBD")},
-                        "score_home": m.get("score", {}).get("fullTime", {}).get("home"),
-                        "score_away": m.get("score", {}).get("fullTime", {}).get("away")
-                    })
-        
-        return render_template("liga_majstrov.html", tabulka=tabulka_data, vyradovacie_zapasy=vyradovacie)
+        if matches and "matches" in matches:
+            vyradovacie = [{"id": m["id"], "faza_sk": preloz_fazu_ucl(m["stage"]), "homeTeam": m["homeTeam"], "awayTeam": m["awayTeam"], "score_home": m["score"]["fullTime"]["home"], "score_away": m["score"]["fullTime"]["away"]} for m in matches["matches"] if m["stage"] != "LEAGUE_STAGE"]
+        return render_template("liga_majstrov.html", tabulka=tabulka, vyradovacie_zapasy=vyradovacie)
     
-    else:
-        tabulka_data = []
-        if data and "standings" in data and len(data["standings"]) > 0:
-            tabulka_data = data["standings"][0].get("table", [])
-        
-        return render_template("tabulka.html", liga=LEAGUES[liga_kod], tabulka=tabulka_data)
+    data = get_cached_data(f"standings_{liga_kod}", f"{BASE_URL}/competitions/{liga_kod}/standings")
+    return render_template("tabulka.html", liga=LEAGUES.get(liga_kod), tabulka=data["standings"][0]["table"] if data else [])
 
 @app.route("/tabulka/tim/<int:tim_id>")
 def profil_timu(tim_id):
-    url_tim = f"{BASE_URL}/teams/{tim_id}"
-    cache_key_tim = f"team_prof_{tim_id}"
-    tim_data = get_cached_data(cache_key_tim, url_tim, expiry_minutes=60)
-
-    if not tim_data:
-        return "Tím sa nepodarilo načítať", 404
-
+    tim_data = get_cached_data(f"team_{tim_id}", f"{BASE_URL}/teams/{tim_id}") or {}
     trener = "Neznámy"
-    if "coach" in tim_data and tim_data["coach"].get("name"):
-        trener = tim_data["coach"]["name"]
-
-    trofeje_list = []
-    if "runningCompetitions" in tim_data:
-        for comp in tim_data["runningCompetitions"]:
-            trofeje_list.append(comp.get("name"))
-    trofeje_str = "Účastník súťaží: " + ", ".join(trofeje_list) if trofeje_list else "Informácie o súťažiach nedostupné"
-
-    url_zapasy = f"{BASE_URL}/teams/{tim_id}/matches?status=FINISHED&limit=5"
-    cache_key_zapasy = f"team_matches_{tim_id}"
-    zapasy_data = get_cached_data(cache_key_zapasy, url_zapasy, expiry_minutes=15)
-
-    posledne_zapasy = []
-    if zapasy_data and "matches" in zapasy_data:
-        for m in zapasy_data["matches"]:
-            raw_date = m.get("utcDate", "")
-            pekny_datum = raw_date[:10] if len(raw_date) >= 10 else raw_date
-            sutaz = m.get("competition", {}).get("name", "Súťaž")
-            domaci = m.get("homeTeam", {}).get("name", "Neznámy")
-            hostia = m.get("awayTeam", {}).get("name", "Neznámy")
-            goly_d = m.get("score", {}).get("fullTime", {}).get("home")
-            goly_h = m.get("score", {}).get("fullTime", {}).get("away")
-            
-            # Pôvodný textový formát formy zápasov
-            text_zapasu = f"{pekny_datum} ({sutaz}): {domaci} {goly_d}:{goly_h} {hostia}"
-            posledne_zapasy.append(text_zapasu)
-
-    return render_template(
-        "tim.html", 
-        tim=tim_data, 
-        trener=trener, 
-        trofeje=trofeje_str, 
-        posledne_zapasy=posledne_zapasy
-    )
+    if tim_id in RUČNÉ_SÚPISKY:
+        tim_data["squad"] = RUČNÉ_SÚPISKY[tim_id].get("players", [])
+        trener = RUČNÉ_SÚPISKY[tim_id].get("coach", {}).get("name", "Neznámy")
+    
+    matches = get_cached_data(f"team_matches_{tim_id}", f"{BASE_URL}/teams/{tim_id}/matches?status=FINISHED&limit=5")
+    posledne_zapasy = [f"{m['utcDate'][:10]}: {m['homeTeam']['name']} {m['score']['fullTime']['home']}:{m['score']['fullTime']['away']} {m['awayTeam']['name']}" for m in matches["matches"]] if matches else []
+    
+    return render_template("tim.html", tim=tim_data, trener=trener, posledne_zapasy=posledne_zapasy, trofeje="Aktuálne dáta z API")
 
 @app.route("/api/zapas/<int:zapas_id>")
-def api_detail_zapasu(zapas_id):
-    url = f"{BASE_URL}/matches/{zapas_id}"
-    cache_key = f"match_det_{zapas_id}"
-    data = get_cached_data(cache_key, url, expiry_minutes=5)
-
-    if not data or "match" not in data:
-        return jsonify({
-            "goals": ["Detaily gólov nie sú k dispozícii v bezplatnej verzii API."],
-            "venue": "Neznámy štadión",
-            "referee": "Neznámy rozhodca"
-        })
-
-    match_core = data["match"]
-    zoznam_golov = []
-
-    if "goals" in match_core and match_core["goals"]:
-        for g in match_core["goals"]:
-            minuta = g.get("minute", "?")
-            strelec = g.get("scorer", {}).get("name", "Neznámy hráč")
-            tim_golu = g.get("team", {}).get("name", "Tím")
-            typ = g.get("type", "REGULAR")
-            doplnok = ""
-            if typ == "PENALTY":
-                doplnok = " (penalta)"
-            elif typ == "OWN":
-                doplnok = " (vlastný gól)"
-            zoznam_golov.append(f"{minuta}' [{tim_golu}] {strelec}{doplnok}")
-
-    stadion = match_core.get("venue", "Neznámy")
-    rozhodca = "Neznámy"
-    if "referees" in match_core and len(match_core["referees"]) > 0:
-        rozhodca = match_core["referees"][0].get("name", "Neznámy")
-
+def api_zapas(zapas_id):
+    data = get_cached_data(f"match_{zapas_id}", f"{BASE_URL}/matches/{zapas_id}")
+    if not data: return jsonify({"venue": "Nedostupné", "referee": "Neznámy"})
     return jsonify({
-        "goals": zoznam_golov,
-        "venue": stadion,
-        "referee": rozhodca
+        "venue": data.get("venue", "Neznámy"),
+        "referee": data.get("referees", [{}])[0].get("name", "Neznámy") if data.get("referees") else "Neznámy",
+        "goals": [f"{g['minute']}' {g['scorer']['name']}" for g in data.get("goals", [])]
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=True)
