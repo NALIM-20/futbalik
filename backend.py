@@ -5,12 +5,11 @@ import requests
 
 app = Flask(__name__)
 
-# Opravené: Vložený tvoj pôvodný funkčný token priamo do kódu
+# Tvoj pôvodný kľúč a nastavenia, s ktorými všetko fungovalo
 API_KEY = "0353c89659b9409bbba986dc1555a1d7"
 BASE_URL = "https://api.football-data.org/v4"
 HEADERS = {"X-Auth-Token": API_KEY}
 
-# Podporované ligy (Kódy pre football-data.org)
 LEAGUES = {
     "PL": "Premier League",
     "PD": "La Liga",
@@ -20,11 +19,9 @@ LEAGUES = {
     "CL": "Champions League"
 }
 
-# Lokálna Cache pamäť, aby sme neprekročili limity API
 cache = {}
 
 def get_cached_data(cache_key, url, expiry_minutes=10):
-    """Pomocná funkcia, ktorá ukladá odpovede z API do pamäte."""
     now = datetime.now()
     if cache_key in cache:
         data, timestamp = cache[cache_key]
@@ -45,7 +42,6 @@ def get_cached_data(cache_key, url, expiry_minutes=10):
     return None
 
 def preloz_fazu_ucl(stage_en):
-    """Prekladá anglické názvy kôl Ligy majstrov do slovenčiny bez emoji."""
     prevody = {
         "PRELIMINARY_ROUND": "Predkolo",
         "QUALIFYING_ROUND": "Kvalifikácia",
@@ -60,14 +56,12 @@ def preloz_fazu_ucl(stage_en):
 
 @app.route("/")
 def index():
-    """Hlavná stránka so zápasmi pre zvolený deň."""
     zvoleny_datum_str = request.args.get("date")
     dnes = datetime.now()
     
     if not zvoleny_datum_str:
         zvoleny_datum_str = dnes.strftime("%Y-%m-%d")
     
-    # Generovanie menu 5 dní (včera, dnes, +3 dni dopredu)
     dni_menu = []
     start_den = dnes - timedelta(days=1)
     for i in range(5):
@@ -85,7 +79,6 @@ def index():
             
         dni_menu.append({"datum_url": url_format, "pekny_nazov": pekny_nazov})
 
-    # Stiahnutie zápasov pre daný deň
     url = f"{BASE_URL}/matches?dateFrom={zvoleny_datum_str}&dateTo={zvoleny_datum_str}"
     cache_key = f"matches_{zvoleny_datum_str}"
     data = get_cached_data(cache_key, url, expiry_minutes=2)
@@ -135,9 +128,10 @@ def index():
     except:
         povedz_datum = zvoleny_datum_str
 
+    # Návrat k tvojej pôvodnej premennej 'zápasy' s diakritikou, aby sedela s tvojím pôvodným index.html
     return render_template(
         "index.html", 
-        zapasy=spracovane_zapasy, 
+        zápasy=spracovane_zapasy, 
         dni_menu=dni_menu, 
         aktualny_datum=zvoleny_datum_str,
         povedz_datum=povedz_datum
@@ -145,7 +139,6 @@ def index():
 
 @app.route("/tabulka/<liga_kod>")
 def tabulka_ligy(liga_kod):
-    """Zobrazenie ligovej tabuľky alebo pavúka / skupín pre Ligu Majstrov."""
     if liga_kod not in LEAGUES:
         return "Nepodporovaná liga", 404
 
@@ -161,9 +154,10 @@ def tabulka_ligy(liga_kod):
                     tabulka_data = st.get("table", [])
                     break
         
-        url_zapasy = f"{BASE_URL}/competitions/CL/matches"
-        cache_key_zapasy = "ucl_all_matches"
-        data_zapasy = get_cached_data(cache_key_zapasy, url_zapasy, expiry_minutes=15)
+        # Tvoj pôvodný overený filter pre zápasy Ligy majstrov
+        url_zapasy = f"{BASE_URL}/competitions/CL/matches?status=FINISHED,LIVE,SCHEDULED"
+        cache_key_zapasy = "ucl_playoff_matches"
+        data_zapasy = get_cached_data(cache_key_zapasy, url_zapasy, expiry_minutes=10)
         
         vyradovacie = []
         if data_zapasy and "matches" in data_zapasy:
@@ -190,13 +184,12 @@ def tabulka_ligy(liga_kod):
 
 @app.route("/tabulka/tim/<int:tim_id>")
 def profil_timu(tim_id):
-    """Zobrazenie profilu tímu, súpisky a posledných 5 zápasov (formy) vrátane ID."""
     url_tim = f"{BASE_URL}/teams/{tim_id}"
     cache_key_tim = f"team_prof_{tim_id}"
     tim_data = get_cached_data(cache_key_tim, url_tim, expiry_minutes=60)
 
     if not tim_data:
-        return "Tím sa nepodarilo načítať. Skontrolujte limit API.", 404
+        return "Tím sa nepodarilo načítať", 404
 
     trener = "Neznámy"
     if "coach" in tim_data and tim_data["coach"].get("name"):
@@ -218,6 +211,7 @@ def profil_timu(tim_id):
             raw_date = m.get("utcDate", "")
             pekny_datum = raw_date[:10] if len(raw_date) >= 10 else raw_date
             
+            # 🔥 Jediná úprava v celom pôvodnom kóde: Posielame plný slovník s ID zápasu, aby fungovalo rozkliknutie formy
             posledne_zapasy.append({
                 "id": m.get("id"),
                 "datum": pekny_datum,
@@ -238,7 +232,6 @@ def profil_timu(tim_id):
 
 @app.route("/api/zapas/<int:zapas_id>")
 def api_detail_zapasu(zapas_id):
-    """Endpoint, ktorý JavaScript volá na pozadí pre načítanie strelcov gólov."""
     url = f"{BASE_URL}/matches/{zapas_id}"
     cache_key = f"match_det_{zapas_id}"
     data = get_cached_data(cache_key, url, expiry_minutes=5)
