@@ -1,47 +1,37 @@
 from flask import Flask, render_template, jsonify, request
 import requests
 from datetime import datetime, timedelta
+# 🔥 IMPORTUJEME TVOJ NOVÝ SÚBOR SO SÚPISKAMI
+from supisky import RUČNÉ_SÚPISKY
 
 app = Flask(__name__)
 
 API_KEY = "e0cad9070cfc48898499f4c78c69141d"
 
-# --- INTELIGENTNÁ CACHE PAMÄŤ ---
-# Sem si bude server ukladať dáta, aby ich neťahal z API každú sekundu
 CACHE_DATA = {}
 
 def ziskaj_z_cache_alebo_api(url, cache_kluc, sekundy_platnosti=300):
-    """
-    Pomocná funkcia, ktorá skontroluje, či máme dáta v pamäti.
-    Ak áno a nie sú staré, vráti ich. Ak nie, stiahne ich z API a uloží.
-    """
     teraz = datetime.now()
-    
-    # Ak máme dáta v cache a nevypršal im čas, vrátime ich
     if cache_kluc in CACHE_DATA:
         data_v_pamati, cas_ulozenia = CACHE_DATA[cache_kluc]
         if teraz - cas_ulozenia < timedelta(seconds=sekundy_platnosti):
-            print(print(f"⚡ Načítavam z CACHE (šetrím limit API): {cache_kluc}"))
+            print(f"⚡ Načítavam z CACHE: {cache_kluc}")
             return data_v_pamati
 
-    # Inak ideme reálne na API
     headers = { "X-Auth-Token": API_KEY }
     try:
         print(f"🌐 Volám REÁLNE API: {url}")
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             json_data = response.json()
-            # Uložíme do cache spolu s aktuálnym časom
             CACHE_DATA[cache_kluc] = (json_data, teraz)
             return json_data
     except Exception as e:
         print(f"Chyba pri volaní API: {e}")
     
-    # Ak API zlyhalo ale máme aspoň staré dáta v cache, vrátime tie, nech stránka nepadne
     if cache_kluc in CACHE_DATA:
         return CACHE_DATA[cache_kluc][0]
     return None
-# ---------------------------------
 
 NAZVY_LIG = {
     "PL": "Premier League (Anglicko)",
@@ -68,30 +58,6 @@ TROFEJE_KLUBOV = {
     "Atlético Madrid": "11x La Liga, 10x Copa del Rey, 3x Európska liga"
 }
 
-REAL_MADRID_SQUAD_FIX = [
-    {"name": "Thibaut Courtois", "position": "Goalkeeper", "nationality": "Belgium"},
-    {"name": "Andriy Lunin", "position": "Goalkeeper", "nationality": "Ukraine"},
-    {"name": "Éder Militão", "position": "Defender", "nationality": "Brazil"},
-    {"name": "Antonio Rüdiger", "position": "Defender", "nationality": "Germany"},
-    {"name": "David Alaba", "position": "Defender", "nationality": "Austria"},
-    {"name": "Dani Carvajal", "position": "Defender", "nationality": "Spain"},
-    {"name": "Ferland Mendy", "position": "France", "nationality": "France"},
-    {"name": "Fran García", "position": "Defender", "nationality": "Spain"},
-    {"name": "Lucas Vázquez", "position": "Defender", "nationality": "Spain"},
-    {"name": "Jude Bellingham", "position": "Midfielder", "nationality": "England"},
-    {"name": "Federico Valverde", "position": "Midfielder", "nationality": "Uruguay"},
-    {"name": "Eduardo Camavinga", "position": "Midfielder", "nationality": "France"},
-    {"name": "Aurélien Tchouaméni", "position": "Midfielder", "nationality": "France"},
-    {"name": "Luka Modrić", "position": "Midfielder", "nationality": "Croatia"},
-    {"name": "Dani Ceballos", "position": "Midfielder", "nationality": "Spain"},
-    {"name": "Arda Güler", "position": "Midfielder", "nationality": "Turkey"},
-    {"name": "Vinícius Júnior", "position": "Forward", "nationality": "Brazil"},
-    {"name": "Kylian Mbappé", "position": "Forward", "nationality": "France"},
-    {"name": "Rodrygo", "position": "Forward", "nationality": "Brazil"},
-    {"name": "Brahim Díaz", "position": "Forward", "nationality": "Morocco"},
-    {"name": "Endrick", "position": "Forward", "nationality": "Brazil"}
-]
-
 TRENERI = {
     86: "Carlo Ancelotti", 81: "Hansi Flick", 65: "Pep Guardiola", 64: "Arne Slot",
     57: "Rúben Amorim", 521: "Vincent Kompany", 524: "Nuri Şahin", 98: "Luis Enrique",
@@ -100,7 +66,6 @@ TRENERI = {
 
 def stiahni_realne_zapasy(vybrany_datum):
     url = f"https://api.football-data.org/v4/matches?dateFrom={vybrany_datum}&dateTo={vybrany_datum}"
-    # Zápasy dňa cachujeme na 60 sekúnd (aby boli live výsledky čerstvé)
     data = ziskaj_z_cache_alebo_api(url, f"zapasy_{vybrany_datum}", sekundy_platnosti=60)
     
     if not data: return []
@@ -150,8 +115,7 @@ def get_api_zapasy():
 @app.route("/api/zapas/<int:zapas_id>")
 def ziskaj_detail_zapasu(zapas_id):
     url = f"https://api.football-data.org/v4/matches/{zapas_id}"
-    # Detaily zápasu sa nemenia, uložíme ich až na 10 minút (600s)
-    z = ziskaj_cache_alebo_api_data = ziskaj_z_cache_alebo_api(url, f"detail_{zapas_id}", sekundy_platnosti=600)
+    z = ziskaj_z_cache_alebo_api(url, f"detail_{zapas_id}", sekundy_platnosti=600)
     if z:
         goals_list = [f"⚽ {g.get('minute')}' {g.get('player', {}).get('name')} ({g.get('team', {}).get('name')})" for g in z.get("goals", [])]
         return jsonify({"venue": z.get("venue", "Neznámy štadión"), "referee": z.get("referees", [{}])[0].get("name", "Neznámy") if z.get("referees") else "Neznámy", "goals": goals_list if goals_list else ["Zápas neskončil gólom alebo detaily nie sú dostupné."]})
@@ -162,7 +126,6 @@ def profil_timu(tim_id):
     url_team = f"https://api.football-data.org/v4/teams/{tim_id}"
     url_matches = f"https://api.football-data.org/v4/teams/{tim_id}/matches?limit=100"
     
-    # Profily tímov sa takmer vôbec nemenia, cachujeme ich na 15 minút (900s)
     tim_data = ziskaj_z_cache_alebo_api(url_team, f"team_profil_{tim_id}", sekundy_platnosti=900)
     matches_data = ziskaj_z_cache_alebo_api(url_matches, f"team_matches_{tim_id}", sekundy_platnosti=900)
 
@@ -175,8 +138,9 @@ def profil_timu(tim_id):
     trofeje = TROFEJE_KLUBOV.get(nazov_klubu, "Klub má na konte domáce tituly a pohárové úspechy.")
     trener = TRENERI.get(tim_id, "Neznámy (Nedodané cez API)")
 
-    if tim_id == 86:
-        tim_data["squad"] = REAL_MADRID_SQUAD_FIX
+    # 🔥 KONTROLA: Ak máme pre toto ID tímu pripravenú ručnú súpisku, prepíšeme ňou dáta z API
+    if tim_id in RUČNÉ_SÚPISKY:
+        tim_data["squad"] = RUČNÉ_SÚPISKY[tim_id]
 
     if matches_data:
         vsetky_zapasy = matches_data.get("matches", [])
@@ -215,7 +179,6 @@ def tabulka(liga_kod="PL"):
     if liga_kod not in NAZVY_LIG: liga_kod = "PL"
     url_standings = f"https://api.football-data.org/v4/competitions/{liga_kod}/standings"
     
-    # Ligové tabulky stačí sťahovať raz za 10 minút (600s)
     data_standings = ziskaj_z_cache_alebo_api(url_standings, f"tabulka_{liga_kod}", sekundy_platnosti=600)
     stojisko = data_standings.get("standings", [{}])[0].get("table", []) if data_standings else []
 
