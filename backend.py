@@ -1,7 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 import requests
 from datetime import datetime, timedelta
-# 🔥 IMPORTUJEME TVOJ NOVÝ SÚBOR SO SÚPISKAMI
+# 🔥 OPRAVENÝ IMPORT: Teraz ťahá dáta priamo z priečinka cez __init__.py
 from supisky import RUČNÉ_SÚPISKY
 
 app = Flask(__name__)
@@ -138,9 +138,19 @@ def profil_timu(tim_id):
     trofeje = TROFEJE_KLUBOV.get(nazov_klubu, "Klub má na konte domáce tituly a pohárové úspechy.")
     trener = TRENERI.get(tim_id, "Neznámy (Nedodané cez API)")
 
-    # 🔥 KONTROLA: Ak máme pre toto ID tímu pripravenú ručnú súpisku, prepíšeme ňou dáta z API
+    # 🔥 INTELIGENTNÁ KONTROLA STRUKTÚRY: Prispôsobenie tvojmu novému formátu súpisiek
     if tim_id in RUČNÉ_SÚPISKY:
-        tim_data["squad"] = RUČNÉ_SÚPISKY[tim_id]
+        data_supisky = RUČNÉ_SÚPISKY[tim_id]
+        
+        # Ak je súpiska slovník a obsahuje kľúč "players" (ako tvoj Manchester City)
+        if isinstance(data_supisky, dict) and "players" in data_supisky:
+            tim_data["squad"] = data_supisky["players"]
+            # Ak si v súbore zadefinoval aj "manager", automaticky prepíšeme meno trénera
+            if "manager" in data_supisky:
+                trener = data_supisky["manager"].get("name", trener)
+        else:
+            # Ak je to rovno čistý zoznam hráčov (ako bol pôvodný Real Madrid)
+            tim_data["squad"] = data_supisky
 
     if matches_data:
         vsetky_zapasy = matches_data.get("matches", [])
