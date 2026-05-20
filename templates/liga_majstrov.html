@@ -8,7 +8,7 @@
         :root {
             --bg-color: #0b130e;
             --card-bg: #142219;
-            --accent-color: #eab308; /* Elegantná zlatá */
+            --accent-color: #eab308; 
             --green-accent: #22c55e;
             --text-main: #f0fdf4;
             --text-muted: #86efac;
@@ -123,12 +123,27 @@
             color: var(--green-accent);
         }
 
-        .playoff-match {
+        /* Upravená vyraďovacia karta zápasu pre klikanie */
+        .playoff-match-card {
+            border-bottom: 1px solid #1b3d29;
+            overflow: hidden;
+        }
+
+        .playoff-match-card:last-child {
+            border-bottom: none;
+        }
+
+        .playoff-match-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 20px;
-            border-bottom: 1px solid #1b3d29;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .playoff-match-header:hover {
+            background-color: #1c3326;
         }
 
         .match-stage {
@@ -138,6 +153,23 @@
             padding: 3px 8px;
             border-radius: 4px;
             font-weight: bold;
+        }
+
+        .match-detail {
+            display: none;
+            background-color: #0e1a13;
+            padding: 12px 20px;
+            border-top: 1px solid #1b3d29;
+            font-size: 0.9rem;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .goal-item {
+            margin: 5px 0;
         }
     </style>
 </head>
@@ -188,13 +220,18 @@
     <div class="playoff-container">
         {% if vyradovacie_zapasy %}
             {% for m in vyradovacie_zapasy %}
-            <div class="playoff-match">
-                <div>
-                    <span class="match-stage">{{ m.faza_sk }}</span>
-                    <span style="margin-left: 10px; font-weight: 600;">{{ m.homeTeam.name }} vs {{ m.awayTeam.name }}</span>
+            <div class="playoff-match-card">
+                <div class="playoff-match-header" onclick="toggleZapasDetail('{{ m.id if m.id else 0 }}', this)">
+                    <div>
+                        <span class="match-stage">{{ m.faza_sk }}</span>
+                        <span style="margin-left: 10px; font-weight: 600;">{{ m.homeTeam.name }} vs {{ m.awayTeam.name }}</span>
+                    </div>
+                    <div style="font-weight: bold; color: var(--green-accent);">
+                        {% if m.score_home is not none %}{{ m.score_home }} : {{ m.score_away }}{% else %}Plánované{% endif %}
+                    </div>
                 </div>
-                <div style="font-weight: bold; color: var(--green-accent);">
-                    {% if m.score_home is not none %}{{ m.score_home }} : {{ m.score_away }}{% else %}Plánované{% endif %}
+                <div class="match-detail">
+                    <div class="loading-spinner">Načítavam strelcov gólov...</div>
                 </div>
             </div>
             {% endfor %}
@@ -205,6 +242,48 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+function toggleZapasDetail(zapasId, headerElement) {
+    const detailDiv = headerElement.nextElementSibling;
+    
+    if (detailDiv.style.display === 'block') {
+        detailDiv.style.display = 'none';
+        return;
+    }
+    
+    detailDiv.style.display = 'block';
+    if (zapasId === '0' || !zapasId) {
+        detailDiv.innerHTML = '<div style="color: var(--text-muted);">Pre tento zápas nie je ID dostupné.</div>';
+        return;
+    }
+    
+    fetch(`/api/zapas/${zapasId}`)
+        .then(response => response.json())
+        .then(data => {
+            let goalsHtml = '';
+            if (data.goals && data.goals.length > 0 && !data.goals[0].includes("Žiadne góly alebo API nedodalo")) {
+                data.goals.forEach(goal => {
+                    let cleanGoal = goal.replace('⚽', '').trim();
+                    goalsHtml += `<div class="goal-item">${cleanGoal}</div>`;
+                });
+            } else {
+                goalsHtml = '<div style="color: #6ee7b7; opacity: 0.7;">Detaily gólov nie sú k dispozícii (zápas sa ešte neodohral alebo bezplatné API nedodalo štatistiku).</div>';
+            }
+
+            detailDiv.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 8px; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted);">Strelci gólov:</div>
+                ${goalsHtml}
+                <div style="margin-top: 12px; font-size: 0.8rem; color: #6ee7b7; opacity: 0.8; border-top: 1px solid #1b3d29; padding-top: 8px;">
+                    Štadión: ${data.venue || 'Neznámy'} | Rozhodca: ${data.referee || 'Neznámy'}
+                </div>
+            `;
+        })
+        .catch(error => {
+            detailDiv.innerHTML = '<div style="color: #ef4444;">Nepodarilo sa načítať detaily.</div>';
+        });
+}
+</script>
 
 </body>
 </html>
