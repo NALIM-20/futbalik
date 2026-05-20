@@ -5,8 +5,8 @@ import requests
 
 app = Flask(__name__)
 
-# API konfigurácia (Render si vytiahne API_KEY z Environment Variables)
-API_KEY = os.environ.get("FOOTBALL_API_KEY", "TU_MÔŽEŠ_DAT_SVOJ_LOKÁLNY_KLÚČ_PRE_TEST")
+# Opravené: Vložený tvoj pôvodný funkčný token priamo do kódu
+API_KEY = "0353c89659b9409bbba986dc1555a1d7"
 BASE_URL = "https://api.football-data.org/v4"
 HEADERS = {"X-Auth-Token": API_KEY}
 
@@ -40,7 +40,6 @@ def get_cached_data(cache_key, url, expiry_minutes=10):
     except Exception as e:
         print(f"Chyba pri volaní API: {e}")
     
-    # Ak zlyhá API a máme starú cache, vrátime aspoň tú
     if cache_key in cache:
         return cache[cache_key][0]
     return None
@@ -75,7 +74,6 @@ def index():
         den = start_den + timedelta(days=i)
         url_format = den.strftime("%Y-%m-%d")
         
-        # Pekný názov pre používateľa
         if url_format == dnes.strftime("%Y-%m-%d"):
             pekny_nazov = "Dnes"
         elif url_format == (dnes - timedelta(days=1)).strftime("%Y-%m-%d"):
@@ -99,7 +97,6 @@ def index():
             if kod_ligy in LEAGUES:
                 status_raw = m.get("status")
                 
-                # Určenie stavu zápasu
                 if status_raw in ["LIVE", "IN_PLAY", "PAUSED"]:
                     status = "LIVE"
                     minute = f"{m.get('minute', '??')}'"
@@ -108,12 +105,10 @@ def index():
                     minute = "Koniec"
                 else:
                     status = "SCHEDULED"
-                    # Vytiahnutie času začiatku zo stringu (2026-05-20T21:00:00Z)
                     utc_date_str = m.get("utcDate")
                     if utc_date_str:
                         try:
                             dt = datetime.strptime(utc_date_str, "%Y-%m-%dT%H:%M:%SZ")
-                            # Posun na náš čas (zjednodušene +2 hodiny pre letný čas v SR)
                             dt_sk = dt + timedelta(hours=2)
                             minute = dt_sk.strftime("%H:%M")
                         except:
@@ -134,7 +129,6 @@ def index():
                     "minute": minute
                 })
 
-    # Pekný formát dátumu do nadpisu
     try:
         obj_dat = datetime.strptime(zvoleny_datum_str, "%Y-%m-%d")
         povedz_datum = obj_dat.strftime("%d.%m.%Y")
@@ -143,7 +137,7 @@ def index():
 
     return render_template(
         "index.html", 
-        zápasy=spracovane_zapasy, 
+        zapasy=spracovane_zapasy, 
         dni_menu=dni_menu, 
         aktualny_datum=zvoleny_datum_str,
         povedz_datum=povedz_datum
@@ -160,7 +154,6 @@ def tabulka_ligy(liga_kod):
     data = get_cached_data(cache_key, url, expiry_minutes=15)
 
     if liga_kod == "CL":
-        # Špeciálne zobrazenie pre Ligu Majstrov (nový formát ligovej fázy a play-off)
         tabulka_data = []
         if data and "standings" in data:
             for st in data["standings"]:
@@ -168,16 +161,14 @@ def tabulka_ligy(liga_kod):
                     tabulka_data = st.get("table", [])
                     break
         
-        # Stiahneme zápasy vyraďovacej fázy UCL
-        url_zapasy = f"{BASE_URL}/competitions/CL/matches?status=FINISHED,LIVE,SCHEDULED"
-        cache_key_zapasy = "ucl_playoff_matches"
-        data_zapasy = get_cached_data(cache_key_zapasy, url_zapasy, expiry_minutes=10)
+        url_zapasy = f"{BASE_URL}/competitions/CL/matches"
+        cache_key_zapasy = "ucl_all_matches"
+        data_zapasy = get_cached_data(cache_key_zapasy, url_zapasy, expiry_minutes=15)
         
         vyradovacie = []
         if data_zapasy and "matches" in data_zapasy:
             for m in data_zapasy["matches"]:
                 faza = m.get("stage")
-                # Filtrujeme iba vyraďovacie kolá, vynechávame základnú ligovú fázu (LEAGUE_STAGE)
                 if faza and faza != "LEAGUE_STAGE":
                     vyradovacie.append({
                         "id": m.get("id"),
@@ -191,7 +182,6 @@ def tabulka_ligy(liga_kod):
         return render_template("liga_majstrov.html", tabulka=tabulka_data, vyradovacie_zapasy=vyradovacie)
     
     else:
-        # Štandardné domáce ligy (PL, La Liga...)
         tabulka_data = []
         if data and "standings" in data and len(data["standings"]) > 0:
             tabulka_data = data["standings"][0].get("table", [])
@@ -206,26 +196,18 @@ def profil_timu(tim_id):
     tim_data = get_cached_data(cache_key_tim, url_tim, expiry_minutes=60)
 
     if not tim_data:
-        return "Tím sa nepodarilo načítať", 404
+        return "Tím sa nepodarilo načítať. Skontrolujte limit API.", 404
 
-    # Získanie trénera z personálu
     trener = "Neznámy"
     if "coach" in tim_data and tim_data["coach"].get("name"):
         trener = tim_data["coach"]["name"]
-    elif "staff" in tim_data:
-        for s in tim_data["staff"]:
-            if "coach" in s.get("role", "").lower():
-                trener = s.get("name")
-                break
 
-    # Spracovanie vyhraných trofejí
     trofeje_list = []
     if "runningCompetitions" in tim_data:
         for comp in tim_data["runningCompetitions"]:
             trofeje_list.append(comp.get("name"))
-    trofeje_str = "Účastník súťaží: " + ", ".join(trofeje_list) if trofeje_list else "Informácie o trofejach nedostupné"
+    trofeje_str = "Účastník súťaží: " + ", ".join(trofeje_list) if trofeje_list else "Informácie o súťažiach nedostupné"
 
-    # Načítanie posledných zápasov pre vytvorenie formy
     url_zapasy = f"{BASE_URL}/teams/{tim_id}/matches?status=FINISHED&limit=5"
     cache_key_zapasy = f"team_matches_{tim_id}"
     zapasy_data = get_cached_data(cache_key_zapasy, url_zapasy, expiry_minutes=15)
@@ -236,7 +218,6 @@ def profil_timu(tim_id):
             raw_date = m.get("utcDate", "")
             pekny_datum = raw_date[:10] if len(raw_date) >= 10 else raw_date
             
-            # 🔥 TU JE OPRAVA: Pridávame korektne m.get("id"), aby ho mohol JavaScript rozkliknúť
             posledne_zapasy.append({
                 "id": m.get("id"),
                 "datum": pekny_datum,
@@ -263,9 +244,8 @@ def api_detail_zapasu(zapas_id):
     data = get_cached_data(cache_key, url, expiry_minutes=5)
 
     if not data or "match" not in data:
-        # Ak API pre tento konkrétny zápas v bezplatnej verzii nič nedodá
         return jsonify({
-            "goals": ["Žiadne góly alebo API nedodalo štatistiky pre tento zápas."],
+            "goals": ["Detaily gólov nie sú k dispozícii v bezplatnej verzii API."],
             "venue": "Neznámy štadión",
             "referee": "Neznámy rozhodca"
         })
@@ -273,14 +253,12 @@ def api_detail_zapasu(zapas_id):
     match_core = data["match"]
     zoznam_golov = []
 
-    # Spracovanie strelcov gólov z poľa 'goals'
     if "goals" in match_core and match_core["goals"]:
         for g in match_core["goals"]:
             minuta = g.get("minute", "?")
             strelec = g.get("scorer", {}).get("name", "Neznámy hráč")
             tim_golu = g.get("team", {}).get("name", "Tím")
             
-            # Detekcia špeciálnych typov gólov (vlastný, penalta)
             typ = g.get("type", "REGULAR")
             doplnok = ""
             if typ == "PENALTY":
@@ -290,7 +268,6 @@ def api_detail_zapasu(zapas_id):
 
             zoznam_golov.append(f"{minuta}' [{tim_golu}] {strelec}{doplnok}")
 
-    # Základné informácie o mieste a rozhodcovi
     stadion = match_core.get("venue", "Neznámy")
     rozhodca = "Neznámy"
     if "referees" in match_core and len(match_core["referees"]) > 0:
@@ -303,5 +280,4 @@ def api_detail_zapasu(zapas_id):
     })
 
 if __name__ == "__main__":
-    # Spustenie na porte 5000 pri lokálnom vývoji
     app.run(host="0.0.0.0", port=5000, debug=True)
