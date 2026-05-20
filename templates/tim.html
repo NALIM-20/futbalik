@@ -3,146 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futbalík.sk - {{ tim.name }}</title>
+    <title>{{ tim.name }} - Profil tímu</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #1a1a1a; color: #f5f5f5; padding: 20px; margin: 0; }
-        .container { max-width: 800px; margin: 0 auto; }
-        
-        .hlavicka-klub { background: #222; padding: 25px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border-bottom: 4px solid #00e676; text-align: center; margin-bottom: 25px; }
-        .hlavicka-klub h1 { margin: 10px 0 5px 0; color: #fff; font-size: 32px; }
-        .info-pruhy { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; color: #aaa; font-size: 14px; margin-top: 10px; }
-        .trener-box { font-size: 16px; margin-top: 12px; color: #00e676; font-weight: bold; background: #1a1a1a; padding: 5px 15px; border-radius: 20px; display: inline-block; border: 1px solid #2d2d2d; }
-        
-        .sekcia-box { background: #222; padding: 20px; border-radius: 6px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .sekcia-nadpis { color: #00e676; font-size: 18px; margin-top: 0; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        
-        .trofej-text { font-size: 16px; font-weight: bold; color: #ffb300; line-height: 1.5; }
-        
-        .supiska-skupina { font-weight: bold; color: #888; text-transform: uppercase; font-size: 12px; margin-top: 15px; margin-bottom: 5px; background: #2c2c2c; padding: 4px 10px; border-radius: 3px; display: inline-block; }
-        .hrac-riadok { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #2d2d2d; font-size: 15px; }
-        .hrac-riadok:hover { background: #292929; }
-        .hrac-narodnost { color: #888; font-size: 13px; }
+        :root {
+            --bg-color: #0b130e;
+            --card-bg: #142219;
+            --accent-color: #22c55e;
+            --text-main: #f0fdf4;
+            --text-muted: #86efac;
+        }
 
-        .zapas-vysledok-tab { width: 100%; border-collapse: collapse; margin-top: 5px; }
-        .zapas-vysledok-tab td { padding: 10px; border-bottom: 1px solid #2d2d2d; font-size: 14px; }
-        .zapas-vysledok-tab tr:hover { background: #292929; }
-        .m-datum { color: #888; font-size: 12px; width: 85px; }
-        .m-sutaz { color: #42a5f5; font-size: 12px; font-weight: bold; width: 130px; }
-        .m-skore { font-weight: bold; color: #00e676; background: #111; padding: 3px 8px; border-radius: 4px; text-align: center; display: inline-block; min-width: 35px; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+        }
 
-        .btn-back { display: inline-block; background: #333; color: #aaa; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 14px; margin-bottom: 20px; transition: all 0.2s; }
-        .btn-back:hover { background: #444; color: #fff; }
+        .navbar {
+            background-color: #091a10;
+            border-bottom: 2px solid var(--accent-color);
+            padding: 15px 20px;
+        }
+
+        .navbar-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .back-btn {
+            color: var(--text-main);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background-color: #11261a;
+            border: 1px solid #1b3d29;
+            font-weight: 600;
+        }
+
+        .back-btn:hover {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .header-card {
+            background-color: var(--card-bg);
+            border: 1px solid #1b3d29;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .team-crest {
+            max-height: 100px;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            color: var(--accent-color);
+            border-bottom: 1px solid #1b3d29;
+            padding-bottom: 8px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .match-item-card {
+            background-color: var(--card-bg);
+            border: 1px solid #1b3d29;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .match-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .match-item-header:hover {
+            background-color: #1c3326;
+        }
+
+        .match-teams {
+            font-weight: 600;
+        }
+
+        .match-score {
+            font-weight: bold;
+            background-color: #09140f;
+            padding: 4px 10px;
+            border-radius: 4px;
+            color: var(--accent-color);
+        }
+
+        .match-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .match-detail {
+            display: none;
+            background-color: #0e1a13;
+            padding: 12px 15px;
+            border-top: 1px solid #1b3d29;
+            font-size: 0.9rem;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .goal-item {
+            margin: 5px 0;
+        }
+
+        .squad-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+        }
+
+        .player-card {
+            background-color: var(--card-bg);
+            border: 1px solid #1b3d29;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .player-name {
+            font-weight: bold;
+        }
+
+        .player-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        
-        <a href="javascript:history.back()" class="btn-back">⬅ Späť</a>
-
-        <div class="hlavicka-klub">
-            <div style="font-size: 40px;">🛡️</div>
-            <h1>{{ tim.name }}</h1>
-            <div class="info-pruhy">
-                <span>🏟️ <b>Štadión:</b> {{ tim.venue if tim.venue else 'Neznámy' }}</span>
-                <span>🎨 <b>Farby:</b> {{ tim.clubColors if tim.clubColors else 'Neznáme' }}</span>
-                <span>🌍 <b>Založený:</b> {{ tim.founded if tim.founded else 'Neznámy rok' }}</span>
-            </div>
-            <div class="trener-box">👔 Hlavný tréner: {{ trener }}</div>
-        </div>
-
-        <div class="sekcia-box">
-            <h2 class="sekcia-nadpis">🏆 Najväčšie Úspechy a Trofeje</h2>
-            <div class="trofej-text">
-                ✨ {{ trofeje }}
-            </div>
-        </div>
-
-        <div class="sekcia-box">
-            <h2 class="sekcia-nadpis">📉 Posledné odohraté zápasy (Forma)</h2>
-            {% if posledne_zapasy %}
-                <table class="zapas-vysledok-tab">
-                    <tbody>
-                        {% for z in posledne_zapasy %}
-                        <tr>
-                            <td class="m-datum">{{ z.datum }}</td>
-                            <td class="m-sutaz">{{ z.sutaz }}</td>
-                            <td><b>{{ z.homeTeam }}</b> — {{ z.awayTeam }}</td>
-                            <td style="text-align: right; width: 60px;">
-                                <span class="m-skore">{{ z.score_home }} : {{ z.score_away }}</span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p style="color: #888; font-style: italic; margin: 0;">Žiadne staršie odohraté zápasy v tejto sezóne.</p>
-            {% endif %}
-        </div>
-
-        <div class="sekcia-box">
-            <h2 class="sekcia-nadpis">📈 Nasledujúce plánované zápasy</h2>
-            {% if nasledujuce_zapasy %}
-                <table class="zapas-vysledok-tab">
-                    <tbody>
-                        {% for z in nasledujuce_zapasy %}
-                        <tr>
-                            <td class="m-datum">{{ z.datum }} <span style="color: #666; font-size:11px;">{{ z.cas }}</span></td>
-                            <td class="m-sutaz">{{ z.sutaz }}</td>
-                            <td>{{ z.homeTeam }} — {{ z.awayTeam }}</td>
-                            <td style="text-align: right; font-size: 12px; color: #888; font-weight: bold; width: 60px; text-transform: uppercase;">
-                                Plán
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p style="color: #888; font-style: italic; margin: 0;">Momentálne nie sú naplánované žiadne ďalšie zápasy.</p>
-            {% endif %}
-        </div>
-
-        <div class="sekcia-box">
-            <h2 class="sekcia-nadpis">🏃 Kompletná Súpiska Tímu</h2>
-            
-            {% if tim.squad %}
-                <div class="supiska-skupina">Brankári</div>
-                {% for hrac in tim.squad if hrac.position in ['Goalkeeper'] %}
-                    <div class="hrac-riadok">
-                        <span>🧤 {{ hrac.name }}</span>
-                        <span class="hrac-narodnost">{{ hrac.nationality }}</span>
-                    </div>
-                {% endfor %}
-
-                <div class="supiska-skupina">Obrancovia</div>
-                {% for hrac in tim.squad if hrac.position in ['Defence', 'Defender', 'Last Man'] %}
-                    <div class="hrac-riadok">
-                        <span>🛡️ {{ hrac.name }}</span>
-                        <span class="hrac-narodnost">{{ hrac.nationality }}</span>
-                    </div>
-                {% endfor %}
-
-                <div class="supiska-skupina">Záložníci</div>
-                {% for hrac in tim.squad if hrac.position in ['Midfield', 'Midfielder'] %}
-                    <div class="hrac-riadok">
-                        <span>⚙️ {{ hrac.name }}</span>
-                        <span class="hrac-narodnost">{{ hrac.nationality }}</span>
-                    </div>
-                {% endfor %}
-
-                <div class="supiska-skupina">Útočníci</div>
-                {% for hrac in tim.squad if hrac.position in ['Offence', 'Offender', 'Forward', 'Winger'] %}
-                    <div class="hrac-riadok">
-                        <span>🔥 {{ hrac.name }}</span>
-                        <span class="hrac-narodnost">{{ hrac.nationality }}</span>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p style="color: #888; font-style: italic; margin: 0;">Bezplatná verzia API neposkytuje súpisku pre tento klub.</p>
-            {% endif %}
-        </div>
-
+<nav class="navbar">
+    <div class="navbar-container">
+        <a href="/" class="logo">Futbalík Live</a>
+        <a href="javascript:history.back()" class="back-btn">Späť</a>
     </div>
-    <br><br>
+</nav>
+
+<div class="container">
+    <div class="header-card">
+        {% if tim.crest %}
+            <img src="{{ tim.crest }}" class="team-crest" alt="Logo">
+        {% endif %}
+        <h2>{{ tim.name }}</h2>
+        <p style="color: var(--text-muted); margin: 5px 0;">Tréner: <strong>{{ trener }}</strong></p>
+        <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 10px;">{{ trofeje }}</p>
+    </div>
+
+    <div class="section-title">Nedávna forma (Kliknutím zobrazíte góly)</div>
+    {% if posledne_zapasy %}
+        {% for m in posledne_zapasy %}
+            <div class="match-item-card">
+                <div class="match-item-header" onclick="toggleZapasDetail('{{ m.id if m.id else 0 }}', this)">
+                    <div>
+                        <div class="match-teams">{{ m.homeTeam }} vs {{ m.awayTeam }}</div>
+                        <div class="match-meta">{{ m.datum }} • {{ m.sutaz }}</div>
+                    </div>
+                    <div class="match-score">
+                        {{ m.score_home }} : {{ m.score_away }}
+                    </div>
+                </div>
+                <div class="match-detail">
+                    <div class="loading-spinner">Načítavam strelcov gólov...</div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: var(--text-muted);">Žiadne odohrané zápasy k dispozícii.</p>
+    {% endif %}
+
+    <div class="section-title">Aktuálna súpiska tímu</div>
+    {% if tim.squad %}
+        <div class="squad-grid">
+            {% for p in tim.squad %}
+                <div class="player-card">
+                    <div class="player-name">{{ p.name }}</div>
+                    <div class="player-meta">{{ p.position }} • {{ p.nationality }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="color: var(--text-muted);">Súpiska pre tento tím nie je v API dostupná.</p>
+    {% endif %}
+</div>
+
+<script>
+function toggleZapasDetail(zapasId, headerElement) {
+    const detailDiv = headerElement.nextElementSibling;
+    
+    if (detailDiv.style.display === 'block') {
+        detailDiv.style.display = 'none';
+        return;
+    }
+    
+    detailDiv.style.display = 'block';
+    if (zapasId === '0' || !zapasId) {
+        detailDiv.innerHTML = '<div style="color: var(--text-muted);">Pre tento zápas nie je ID dostupné.</div>';
+        return;
+    }
+    
+    fetch(`/api/zapas/${zapasId}`)
+        .then(response => response.json())
+        .then(data => {
+            let goalsHtml = '';
+            if (data.goals && data.goals.length > 0 && !data.goals[0].includes("Žiadne góly alebo API nedodalo")) {
+                data.goals.forEach(goal => {
+                    // Odstránenie emoji lopty, ak by ho posielal backend
+                    let cleanGoal = goal.replace('⚽', '').trim();
+                    goalsHtml += `<div class="goal-item">${cleanGoal}</div>`;
+                });
+            } else {
+                goalsHtml = '<div style="color: #6ee7b7; opacity: 0.7;">Detaily gólov nie sú k dispozícii.</div>';
+            }
+
+            detailDiv.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 8px; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted);">Strelci gólov:</div>
+                ${goalsHtml}
+                <div style="margin-top: 12px; font-size: 0.8rem; color: #6ee7b7; opacity: 0.8; border-top: 1px solid #1b3d29; padding-top: 8px;">
+                    Štadión: ${data.venue || 'Neznámy'} | Rozhodca: ${data.referee || 'Neznámy'}
+                </div>
+            `;
+        })
+        .catch(error => {
+            detailDiv.innerHTML = '<div style="color: #ef4444;">Nepodarilo sa načítať detaily.</div>';
+        });
+}
+</script>
+
 </body>
 </html>
