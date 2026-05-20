@@ -6,6 +6,43 @@ app = Flask(__name__)
 
 API_KEY = "e0cad9070cfc48898499f4c78c69141d"
 
+# --- INTELIGENTNÁ CACHE PAMÄŤ ---
+# Sem si bude server ukladať dáta, aby ich neťahal z API každú sekundu
+CACHE_DATA = {}
+
+def ziskaj_z_cache_alebo_api(url, cache_kluc, sekundy_platnosti=300):
+    """
+    Pomocná funkcia, ktorá skontroluje, či máme dáta v pamäti.
+    Ak áno a nie sú staré, vráti ich. Ak nie, stiahne ich z API a uloží.
+    """
+    teraz = datetime.now()
+    
+    # Ak máme dáta v cache a nevypršal im čas, vrátime ich
+    if cache_kluc in CACHE_DATA:
+        data_v_pamati, cas_ulozenia = CACHE_DATA[cache_kluc]
+        if teraz - cas_ulozenia < timedelta(seconds=sekundy_platnosti):
+            print(print(f"⚡ Načítavam z CACHE (šetrím limit API): {cache_kluc}"))
+            return data_v_pamati
+
+    # Inak ideme reálne na API
+    headers = { "X-Auth-Token": API_KEY }
+    try:
+        print(f"🌐 Volám REÁLNE API: {url}")
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            json_data = response.json()
+            # Uložíme do cache spolu s aktuálnym časom
+            CACHE_DATA[cache_kluc] = (json_data, teraz)
+            return json_data
+    except Exception as e:
+        print(f"Chyba pri volaní API: {e}")
+    
+    # Ak API zlyhalo ale máme aspoň staré dáta v cache, vrátime tie, nech stránka nepadne
+    if cache_kluc in CACHE_DATA:
+        return CACHE_DATA[cache_kluc][0]
+    return None
+# ---------------------------------
+
 NAZVY_LIG = {
     "PL": "Premier League (Anglicko)",
     "BL1": "Bundesliga (Nemecko)",
@@ -31,7 +68,6 @@ TROFEJE_KLUBOV = {
     "Atlético Madrid": "11x La Liga, 10x Copa del Rey, 3x Európska liga"
 }
 
-# 🛡️ Záchranná reálna súpiska pre Real Madrid (keďže API posiela bludy)
 REAL_MADRID_SQUAD_FIX = [
     {"name": "Thibaut Courtois", "position": "Goalkeeper", "nationality": "Belgium"},
     {"name": "Andriy Lunin", "position": "Goalkeeper", "nationality": "Ukraine"},
@@ -39,7 +75,7 @@ REAL_MADRID_SQUAD_FIX = [
     {"name": "Antonio Rüdiger", "position": "Defender", "nationality": "Germany"},
     {"name": "David Alaba", "position": "Defender", "nationality": "Austria"},
     {"name": "Dani Carvajal", "position": "Defender", "nationality": "Spain"},
-    {"name": "Ferland Mendy", "position": "Defender", "nationality": "France"},
+    {"name": "Ferland Mendy", "position": "France", "nationality": "France"},
     {"name": "Fran García", "position": "Defender", "nationality": "Spain"},
     {"name": "Lucas Vázquez", "position": "Defender", "nationality": "Spain"},
     {"name": "Jude Bellingham", "position": "Midfielder", "nationality": "England"},
@@ -56,46 +92,44 @@ REAL_MADRID_SQUAD_FIX = [
     {"name": "Endrick", "position": "Forward", "nationality": "Brazil"}
 ]
 
+TRENERI = {
+    86: "Carlo Ancelotti", 81: "Hansi Flick", 65: "Pep Guardiola", 64: "Arne Slot",
+    57: "Rúben Amorim", 521: "Vincent Kompany", 524: "Nuri Şahin", 98: "Luis Enrique",
+    109: "Thiago Motta", 110: "Simone Inzaghi", 113: "Paulo Fonseca", 78: "Diego Simeone"
+}
+
 def stiahni_realne_zapasy(vybrany_datum):
     url = f"https://api.football-data.org/v4/matches?dateFrom={vybrany_datum}&dateTo={vybrany_datum}"
-    headers = { "X-Auth-Token": API_KEY }
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200: return []
-        data = response.json()
-        vsetky_zapasy = data.get("matches", [])
-        spracovane_zapasy = []
-        for z in vsetky_zapasy:
-            status = z.get("status")
-            if status in ["IN_PLAY", "PAUSED"]:
-                nas_status = "LIVE"; minuta = "Živo"
-            elif status == "FINISHED":
-                nas_status = "FINISHED"; minuta = "Koniec"
-            else:
-                nas_status = "SCHEDULED"
-                utc_time = z.get("utcDate", "")
-                minuta = datetime.strptime(utc_time, "%Y-%m-%dT%H:%M:%SZ").strftime("%H:%M") if utc_time else "Plán"
+    # Zápasy dňa cachujeme na 60 sekúnd (aby boli live výsledky čerstvé)
+    data = ziskaj_z_cache_alebo_api(url, f"zapasy_{vybrany_datum}", sekundy_platnosti=60)
+    
+    if not data: return []
+    
+    vsetky_zapasy = data.get("matches", [])
+    spracovane_zapasy = []
+    for z in vsetky_zapasy:
+        status = z.get("status")
+        if status in ["IN_PLAY", "PAUSED"]:
+            nas_status = "LIVE"; minuta = "Živo"
+        elif status == "FINISHED":
+            nas_status = "FINISHED"; minuta = "Koniec"
+        else:
+            nas_status = "SCHEDULED"
+            utc_time = z.get("utcDate", "")
+            minuta = datetime.strptime(utc_time, "%Y-%m-%dT%H:%M:%SZ").strftime("%H:%M") if utc_time else "Plán"
 
-            goals_list = []
-            for goal in z.get("goals", []):
-                minute = goal.get("minute")
-                p_name = goal.get("player", {}).get("name")
-                t_name = goal.get("team", {}).get("name")
-                goals_list.append(f"⚽ {minute}' {p_name} ({t_name})")
-            
-            if not goals_list: goals_list = ["Žiadne góly alebo API nedodalo detaily"]
+        goals_list = [f"⚽ {g.get('minute')}' {g.get('player', {}).get('name')} ({g.get('team', {}).get('name')})" for g in z.get("goals", [])]
+        if not goals_list: goals_list = ["Žiadne góly alebo API nedodalo detaily"]
 
-            spracovane_zapasy.append({
-                "id": z.get("id"),
-                # 🔥 PRIDANÉ ID TÍMOV PRE KLIKATEĽNOSŤ NA HLAVNEJ STRÁNKE
-                "homeTeam": {"id": z.get("homeTeam", {}).get("id"), "name": z.get("homeTeam", {}).get("name", "Neznámy")},
-                "awayTeam": {"id": z.get("awayTeam", {}).get("id"), "name": z.get("awayTeam", {}).get("name", "Neznámy")},
-                "score": {"home": z.get("score", {}).get("fullTime", {}).get("home"), "away": z.get("score", {}).get("fullTime", {}).get("away")},
-                "status": nas_status, "minute": minuta, "league": z.get("competition", {}).get("name", "Ostatné ligy"),
-                "details": {"venue": z.get("venue", "Neznámy štadión"), "referee": z.get("referees", [{}])[0].get("name", "Neznámy") if z.get("referees") else "Neznámy", "goals": goals_list}
-            })
-        return spracovane_zapasy
-    except: return []
+        spracovane_zapasy.append({
+            "id": z.get("id"),
+            "homeTeam": {"id": z.get("homeTeam", {}).get("id"), "name": z.get("homeTeam", {}).get("name", "Neznámy")},
+            "awayTeam": {"id": z.get("awayTeam", {}).get("id"), "name": z.get("awayTeam", {}).get("name", "Neznámy")},
+            "score": {"home": z.get("score", {}).get("fullTime", {}).get("home"), "away": z.get("score", {}).get("fullTime", {}).get("away")},
+            "status": nas_status, "minute": minuta, "league": z.get("competition", {}).get("name", "Ostatné ligy"),
+            "details": {"venue": z.get("venue", "Neznámy štadión"), "referee": z.get("referees", [{}])[0].get("name", "Neznámy") if z.get("referees") else "Neznámy", "goals": goals_list}
+        })
+    return spracovane_zapasy
 
 @app.route("/")
 def home():
@@ -116,87 +150,55 @@ def get_api_zapasy():
 @app.route("/api/zapas/<int:zapas_id>")
 def ziskaj_detail_zapasu(zapas_id):
     url = f"https://api.football-data.org/v4/matches/{zapas_id}"
-    headers = { "X-Auth-Token": API_KEY }
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            z = response.json()
-            goals_list = [f"⚽ {g.get('minute')}' {g.get('player', {}).get('name')} ({g.get('team', {}).get('name')})" for g in z.get("goals", [])]
-            return jsonify({"venue": z.get("venue", "Neznámy štadión"), "referee": z.get("referees", [{}])[0].get("name", "Neznámy") if z.get("referees") else "Neznámy", "goals": goals_list if goals_list else ["Zápas neskončil gólom alebo detaily nie sú dostupné."]})
-    except: pass
-    return jsonify({"venue": "Neznámy štadión", "referee": "Neznámy", "goals": ["Chyba rozhrania API"]})
+    # Detaily zápasu sa nemenia, uložíme ich až na 10 minút (600s)
+    z = ziskaj_cache_alebo_api_data = ziskaj_z_cache_alebo_api(url, f"detail_{zapas_id}", sekundy_platnosti=600)
+    if z:
+        goals_list = [f"⚽ {g.get('minute')}' {g.get('player', {}).get('name')} ({g.get('team', {}).get('name')})" for g in z.get("goals", [])]
+        return jsonify({"venue": z.get("venue", "Neznámy štadión"), "referee": z.get("referees", [{}])[0].get("name", "Neznámy") if z.get("referees") else "Neznámy", "goals": goals_list if goals_list else ["Zápas neskončil gólom alebo detaily nie sú dostupné."]})
+    return jsonify({"venue": "Neznámy štadión", "referee": "Neznámy", "goals": ["Detaily momentálne nedostupné"]})
 
 @app.route("/tabulka/tim/<int:tim_id>")
 def profil_timu(tim_id):
-    headers = { "X-Auth-Token": API_KEY }
     url_team = f"https://api.football-data.org/v4/teams/{tim_id}"
     url_matches = f"https://api.football-data.org/v4/teams/{tim_id}/matches?limit=100"
     
-    tim_data = {}
-    odohrane = []
-    naplanovane = []
-    trofeje = "Klub má na konte domáce tituly a pohárové úspechy."
-    trener = "Neznámy (Nedodané cez API)"
-
-    # Tréneri natvrdo pre top tímy, keďže ich free API vymazalo
-    TRENERI = {
-        86: "Carlo Ancelotti",      # Real Madrid
-        81: "Hansi Flick",          # Barcelona
-        65: "Pep Guardiola",        # Manchester City
-        64: "Arne Slot",            # Liverpool
-        57: "Rúben Amorim",         # Manchester United
-        521: "Vincent Kompany",     # Bayern
-        524: "Nuri Şahin",          # Dortmund
-        98: "Luis Enrique",         # PSG
-        109: "Thiago Motta",        # Juventus
-        110: "Simone Inzaghi",      # Inter Milan
-        113: "Paulo Fonseca",       # AC Milan
-        78: "Diego Simeone"         # Atlético Madrid
-    }
-    
-    trener = TRENERI.get(tim_id, trener)
-
-    try:
-        res_team = requests.get(url_team, headers=headers)
-        if res_team.status_code == 200:
-            tim_data = res_team.json()
-            nazov_klubu = tim_data.get("name", "")
-            trofeje = TROFEJE_KLUBOV.get(nazov_klubu, trofeje)
-            
-            # 🔥 OPRAVA SÚPISKY PRE REAL MADRID
-            if tim_id == 86:
-                tim_data["squad"] = REAL_MADRID_SQUAD_FIX
-    except Exception as e:
-        print(f"Chyba profilu tímu: {e}")
-
-    try:
-        res_matches = requests.get(url_matches, headers=headers)
-        if res_matches.status_code == 200:
-            vsetky_zapasy = res_matches.json().get("matches", [])
-            for m in vsetky_zapasy:
-                status = m.get("status")
-                datum_raw = m.get("utcDate", "")
-                pekny_datum = datetime.strptime(datum_raw, "%Y-%m-%dT%H:%M:%SZ").strftime("%d.%m.%Y") if datum_raw else ""
-                
-                zapas_info = {
-                    "datum": pekny_datum,
-                    "sutaz": m.get("competition", {}).get("name", "Súťaž"),
-                    "homeTeam": m.get("homeTeam", {}).get("name", "Neznámy"),
-                    "awayTeam": m.get("awayTeam", {}).get("name", "Neznámy"),
-                    "score_home": m.get("score", {}).get("fullTime", {}).get("home"),
-                    "score_away": m.get("score", {}).get("fullTime", {}).get("away")
-                }
-                if status == "FINISHED":
-                    odohrane.append(zapas_info)
-                else:
-                    zapas_info["cas"] = datetime.strptime(datum_raw, "%Y-%m-%dT%H:%M:%SZ").strftime("%H:%M") if datum_raw else ""
-                    naplanovane.append(zapas_info)
-            odohrane.reverse()
-    except Exception as e:
-        print(f"Chyba zápasov tímu: {e}")
+    # Profily tímov sa takmer vôbec nemenia, cachujeme ich na 15 minút (900s)
+    tim_data = ziskaj_z_cache_alebo_api(url_team, f"team_profil_{tim_id}", sekundy_platnosti=900)
+    matches_data = ziskaj_z_cache_alebo_api(url_matches, f"team_matches_{tim_id}", sekundy_platnosti=900)
 
     if not tim_data:
-        return "Chyba pri načítaní profilu tímu.", 404
+        return "⚠️ API limit bol vyčerpaný. Počkajte 30 sekúnd a obnovte stránku (F5).", 429
+
+    odohrane = []
+    naplanovane = []
+    nazov_klubu = tim_data.get("name", "")
+    trofeje = TROFEJE_KLUBOV.get(nazov_klubu, "Klub má na konte domáce tituly a pohárové úspechy.")
+    trener = TRENERI.get(tim_id, "Neznámy (Nedodané cez API)")
+
+    if tim_id == 86:
+        tim_data["squad"] = REAL_MADRID_SQUAD_FIX
+
+    if matches_data:
+        vsetky_zapasy = matches_data.get("matches", [])
+        for m in vsetky_zapasy:
+            status = m.get("status")
+            datum_raw = m.get("utcDate", "")
+            pekny_datum = datetime.strptime(datum_raw, "%Y-%m-%dT%H:%M:%SZ").strftime("%d.%m.%Y") if datum_raw else ""
+            
+            zapas_info = {
+                "datum": pekny_datum,
+                "sutaz": m.get("competition", {}).get("name", "Súťaž"),
+                "homeTeam": m.get("homeTeam", {}).get("name", "Neznámy"),
+                "awayTeam": m.get("awayTeam", {}).get("name", "Neznámy"),
+                "score_home": m.get("score", {}).get("fullTime", {}).get("home"),
+                "score_away": m.get("score", {}).get("fullTime", {}).get("away")
+            }
+            if status == "FINISHED":
+                odohrane.append(zapas_info)
+            else:
+                zapas_info["cas"] = datetime.strptime(datum_raw, "%Y-%m-%dT%H:%M:%SZ").strftime("%H:%M") if datum_raw else ""
+                naplanovane.append(zapas_info)
+        odohrane.reverse()
 
     return render_template(
         "tim.html", 
@@ -212,34 +214,28 @@ def profil_timu(tim_id):
 def tabulka(liga_kod="PL"):
     if liga_kod not in NAZVY_LIG: liga_kod = "PL"
     url_standings = f"https://api.football-data.org/v4/competitions/{liga_kod}/standings"
-    headers = { "X-Auth-Token": API_KEY }
-    stojisko = []
-    vyradovacie_zapasy = []
     
-    try:
-        response = requests.get(url_standings, headers=headers)
-        if response.status_code == 200:
-            stojisko = response.json().get("standings", [{}])[0].get("table", [])
-    except: pass
+    # Ligové tabulky stačí sťahovať raz za 10 minút (600s)
+    data_standings = ziskaj_z_cache_alebo_api(url_standings, f"tabulka_{liga_kod}", sekundy_platnosti=600)
+    stojisko = data_standings.get("standings", [{}])[0].get("table", []) if data_standings else []
 
     if liga_kod == "CL":
         url_matches = f"https://api.football-data.org/v4/competitions/CL/matches"
-        try:
-            res_matches = requests.get(url_matches, headers=headers)
-            if res_matches.status_code == 200:
-                vsetky_cl_zapasy = res_matches.json().get("matches", [])
-                fazy_playoff = ["PLAY_OFF_ROUND", "ROUND_OF_16", "QUARTER_FINALS", "SEMI_FINALS", "FINAL"]
-                preklady_faz = {"PLAY_OFF_ROUND": "Play-off o osemfinále", "ROUND_OF_16": "Osemfinále", "QUARTER_FINALS": "Štvrťfinále", "SEMI_FINALS": "Semifinále", "FINAL": "🏆 FINÁLE"}
-                for zm in vsetky_cl_zapasy:
-                    if zm.get("stage") in fazy_playoff:
-                        vyradovacie_zapasy.append({
-                            "id": zm.get("id"), "faza_sk": preklady_faz.get(zm.get("stage"), zm.get("stage")),
-                            # 🔥 PRIDANÉ AJ ID TÍMOV PRE LIGU MAJSTROV
-                            "homeTeam": {"id": zm.get("homeTeam", {}).get("id"), "name": zm.get("homeTeam", {}).get("name")},
-                            "awayTeam": {"id": zm.get("awayTeam", {}).get("id"), "name": zm.get("awayTeam", {}).get("name")},
-                            "score_home": zm.get("score", {}).get("fullTime", {}).get("home"), "score_away": zm.get("score", {}).get("fullTime", {}).get("away"), "status": zm.get("status")
-                        })
-        except: pass
+        data_cl = ziskaj_z_cache_alebo_api(url_matches, "cl_playoff_matches", sekundy_platnosti=600)
+        vyradovacie_zapasy = []
+        
+        if data_cl:
+            vsetky_cl_zapasy = data_cl.get("matches", [])
+            fazy_playoff = ["PLAY_OFF_ROUND", "ROUND_OF_16", "QUARTER_FINALS", "SEMI_FINALS", "FINAL"]
+            preklady_faz = {"PLAY_OFF_ROUND": "Play-off", "ROUND_OF_16": "Osemfinále", "QUARTER_FINALS": "Štvrťfinále", "SEMI_FINALS": "Semifinále", "FINAL": "🏆 FINÁLE"}
+            for zm in vsetky_cl_zapasy:
+                if zm.get("stage") in fazy_playoff:
+                    vyradovacie_zapasy.append({
+                        "id": zm.get("id"), "faza_sk": preklady_faz.get(zm.get("stage"), zm.get("stage")),
+                        "homeTeam": {"id": zm.get("homeTeam", {}).get("id"), "name": zm.get("homeTeam", {}).get("name")},
+                        "awayTeam": {"id": zm.get("awayTeam", {}).get("id"), "name": zm.get("awayTeam", {}).get("name")},
+                        "score_home": zm.get("score", {}).get("fullTime", {}).get("home"), "score_away": zm.get("score", {}).get("fullTime", {}).get("away"), "status": zm.get("status")
+                    })
         return render_template("liga_majstrov.html", tabulka=stojisko, liga=NAZVY_LIG[liga_kod], aktualna_liga=liga_kod, vyradovacie_zapasy=vyradovacie_zapasy)
         
     return render_template("tabulka.html", tabulka=stojisko, liga=NAZVY_LIG[liga_kod], aktualna_liga=liga_kod)
