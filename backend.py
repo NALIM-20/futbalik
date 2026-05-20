@@ -5,7 +5,7 @@ import requests
 
 app = Flask(__name__)
 
-# Tvoj pôvodný kľúč a nastavenia, s ktorými všetko fungovalo
+# Tvoj overený API kľúč
 API_KEY = "0353c89659b9409bbba986dc1555a1d7"
 BASE_URL = "https://api.football-data.org/v4"
 HEADERS = {"X-Auth-Token": API_KEY}
@@ -128,10 +128,10 @@ def index():
     except:
         povedz_datum = zvoleny_datum_str
 
-    # Návrat k tvojej pôvodnej premennej 'zápasy' s diakritikou, aby sedela s tvojím pôvodným index.html
+    # Bezpečný názov premennej bez diakritiky pre HTML šablónu
     return render_template(
         "index.html", 
-        zápasy=spracovane_zapasy, 
+        zapasy=spracovane_zapasy, 
         dni_menu=dni_menu, 
         aktualny_datum=zvoleny_datum_str,
         povedz_datum=povedz_datum
@@ -154,7 +154,6 @@ def tabulka_ligy(liga_kod):
                     tabulka_data = st.get("table", [])
                     break
         
-        # Tvoj pôvodný overený filter pre zápasy Ligy majstrov
         url_zapasy = f"{BASE_URL}/competitions/CL/matches?status=FINISHED,LIVE,SCHEDULED"
         cache_key_zapasy = "ucl_playoff_matches"
         data_zapasy = get_cached_data(cache_key_zapasy, url_zapasy, expiry_minutes=10)
@@ -211,7 +210,6 @@ def profil_timu(tim_id):
             raw_date = m.get("utcDate", "")
             pekny_datum = raw_date[:10] if len(raw_date) >= 10 else raw_date
             
-            # 🔥 Jediná úprava v celom pôvodnom kóde: Posielame plný slovník s ID zápasu, aby fungovalo rozkliknutie formy
             posledne_zapasy.append({
                 "id": m.get("id"),
                 "datum": pekny_datum,
